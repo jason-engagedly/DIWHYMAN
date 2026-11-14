@@ -7,7 +7,7 @@ export const DEFAULTS = {
   windowSqFt: 15, // average 3' x 5' window
   paintCoverageSqFtPerGallon: 350, // most interior paints say 350-400
   primerCoverageSqFtPerGallon: 300, // primer soaks in more, so it covers less
-  wasteFactor: 1.1, // 10% extra for touch-ups, roller absorption and mistakes
+  wasteFactor: 1.05, // 5% for paint soaked into rollers and brushes
 };
 
 // Surface problems the photo analysis (or the user) can flag.
@@ -60,7 +60,8 @@ function isLowHidingColor(hex) {
 /**
  * Work out the paintable area.
  * @param {object} room
- * @param {number} room.wallWidthFt   Total width of all walls being painted, added together.
+ * @param {number[]} [room.wallWidthsFt] Width of each wall being painted.
+ * @param {number} [room.wallWidthFt]    Or: total width of all walls, already added together.
  * @param {number} room.wallHeightFt  Floor-to-ceiling height.
  * @param {number} [room.doors]       Number of doors on those walls.
  * @param {number} [room.windows]     Number of windows on those walls.
@@ -68,7 +69,10 @@ function isLowHidingColor(hex) {
  * @param {number} [room.ceilingSqFt] Ceiling area, needed if includeCeiling is true.
  */
 export function paintableArea(room) {
-  const width = Number(room.wallWidthFt);
+  const widths = Array.isArray(room.wallWidthsFt)
+    ? room.wallWidthsFt.map(Number).filter((w) => w > 0)
+    : [];
+  const width = widths.length ? widths.reduce((a, b) => a + b, 0) : Number(room.wallWidthFt);
   const height = Number(room.wallHeightFt);
   if (!(width > 0) || !(height > 0)) {
     throw new Error("Wall width and wall height must both be greater than 0.");
@@ -83,6 +87,8 @@ export function paintableArea(room) {
   const ceilingSqFt = room.includeCeiling ? Math.max(0, Number(room.ceilingSqFt) || 0) : 0;
 
   return {
+    totalWallWidthFt: round1(width),
+    wallHeightFt: round1(height),
     grossWallSqFt: round1(grossWallSqFt),
     openingsSqFt: round1(Math.min(openingsSqFt, grossWallSqFt)),
     wallSqFt: round1(wallSqFt),
@@ -171,35 +177,33 @@ export function coatPlan({ currentColorHex, targetColorHex, conditions = [] }) {
   };
 }
 
-/** Express gallons as something you can actually buy: 5-gallon buckets, gallons and quarts. */
-export function toCans(gallonsNeeded) {
-  // Work in quarts (0.25 gal), rounding up so you're never short.
-  let quarts = Math.ceil(gallonsNeeded * 4 - 1e-9);
-  if (quarts <= 0) return { buckets5: 0, gallons: 0, quarts: 0, label: "Nothing to buy" };
-
-  // A 5-gallon bucket (20 quarts) costs about the same as 4 single gallons,
-  // so any leftover of 4 gallons or more becomes another bucket.
-  let buckets5 = Math.floor(quarts / 20);
-  let rest = quarts % 20;
-  if (rest >= 16) {
-    buckets5 += 1;
-    rest = 0;
+/**
+ * Paint is sold by the gallon, so round up to whole gallons and say how much will be left.
+ * @param {number} gallonsToBuyFor  What the job uses, including roller/brush loss.
+ * @param {number} gallonsApplied   What actually goes on the wall (used for the leftover note).
+ */
+export function wholeGallons(gallonsToBuyFor, gallonsApplied = gallonsToBuyFor) {
+  if (!(gallonsToBuyFor > 0)) {
+    return { gallons: 0, leftoverGallons: 0, label: "Nothing to buy", note: null, bucketTip: false };
   }
+  const gallons = Math.max(1, Math.ceil(gallonsToBuyFor - 1e-9));
+  const leftover = Math.max(0, gallons - gallonsApplied);
+  return {
+    gallons,
+    leftoverGallons: round1(leftover),
+    label: `${gallons} gallon${gallons > 1 ? "s" : ""}`,
+    note: leftoverNote(leftover),
+    // At 5+ gallons, a single 5-gallon bucket is usually cheaper than separate cans.
+    bucketTip: gallons >= 5,
+  };
+}
 
-  // 3 quarts cost about the same as a gallon, so round 3 quarts up to a gallon.
-  if (rest % 4 === 3) rest += 1;
-  if (rest >= 16) {
-    buckets5 += 1;
-    rest = 0;
-  }
-  const gallons = Math.floor(rest / 4);
-  const looseQuarts = rest % 4;
-
-  const parts = [];
-  if (buckets5) parts.push(`${buckets5} × 5-gallon bucket${buckets5 > 1 ? "s" : ""}`);
-  if (gallons) parts.push(`${gallons} gallon${gallons > 1 ? "s" : ""}`);
-  if (looseQuarts) parts.push(`${looseQuarts} quart${looseQuarts > 1 ? "s" : ""}`);
-  return { buckets5, gallons, quarts: looseQuarts, label: parts.join(" + ") };
+function leftoverNote(leftover) {
+  if (leftover < 0.15) return "You'll use almost all of it.";
+  if (leftover < 0.4) return "About a quart left over for touch-ups.";
+  if (leftover < 0.65) return "About half a gallon left over for touch-ups.";
+  if (leftover < 0.9) return "About 3 quarts left over for touch-ups.";
+  return `About ${round1(leftover)} gallons left over.`;
 }
 
 /**
@@ -213,26 +217,35 @@ export function buildPaintPlan(input) {
 
   // When one coat might do, still buy for two so you're not short.
   const coatsToBuyFor = Math.max(plan.coats, 2);
-  const paintGallons =
-    (area.totalSqFt * coatsToBuyFor * DEFAULTS.wasteFactor) / DEFAULTS.paintCoverageSqFtPerGallon;
+  const paintApplied = (area.totalSqFt * coatsToBuyFor) / DEFAULTS.paintCoverageSqFtPerGallon;
+  const paintGallons = paintApplied * DEFAULTS.wasteFactor;
 
   let primerSqFt = 0;
   if (plan.primer === "full") primerSqFt = area.totalSqFt;
   if (plan.primer === "spot") primerSqFt = area.totalSqFt * 0.15; // rough share of wall that's patched
-  const primerGallons = (primerSqFt * DEFAULTS.wasteFactor) / DEFAULTS.primerCoverageSqFtPerGallon;
+  const primerApplied = primerSqFt / DEFAULTS.primerCoverageSqFtPerGallon;
+  const primerGallons = primerApplied * DEFAULTS.wasteFactor;
 
   return {
     area,
     ...plan,
-    paint: { gallons: round2(paintGallons), buy: toCans(paintGallons), coatsBoughtFor: coatsToBuyFor },
+    paint: {
+      gallons: round2(paintGallons),
+      buy: wholeGallons(paintGallons, paintApplied),
+      coatsBoughtFor: coatsToBuyFor,
+    },
     primerAmount:
       plan.primer === "none"
         ? null
-        : { gallons: round2(primerGallons), buy: toCans(primerGallons) },
+        : {
+            gallons: round2(primerGallons),
+            sqFt: round1(primerSqFt),
+            buy: wholeGallons(primerGallons, primerApplied),
+          },
     assumptions: [
       `Paint covers about ${DEFAULTS.paintCoverageSqFtPerGallon} sq ft per gallon per coat; primer about ${DEFAULTS.primerCoverageSqFtPerGallon}.`,
       `Each door subtracts ${DEFAULTS.doorSqFt} sq ft and each window ${DEFAULTS.windowSqFt} sq ft.`,
-      `Includes ${Math.round((DEFAULTS.wasteFactor - 1) * 100)}% extra for touch-ups and waste.`,
+      `Includes ${Math.round((DEFAULTS.wasteFactor - 1) * 100)}% for paint lost in rollers and brushes, then rounds up to whole gallons.`,
       "Trim, baseboards and doors are not included. They usually need a separate semi-gloss paint.",
     ],
   };

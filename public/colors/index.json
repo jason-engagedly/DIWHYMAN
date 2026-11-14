@@ -1,0 +1,23 @@
+{
+  "brands": [
+    {
+      "id": "sherwin-williams",
+      "name": "Sherwin-Williams",
+      "count": 1526,
+      "note": null
+    },
+    {
+      "id": "benjamin-moore",
+      "name": "Benjamin Moore",
+      "count": 3907,
+      "note": "Some Benjamin Moore names are shortened and part of the Off-White Collection is missing. Search by code if a name doesn't come up."
+    },
+    {
+      "id": "behr",
+      "name": "Behr",
+      "count": 4482,
+      "note": null
+    }
+  ],
+  "source": "colornerd by James Pederson (MIT license), https://github.com/jpederson/colornerd"
+}

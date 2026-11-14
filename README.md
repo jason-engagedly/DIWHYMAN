@@ -2,31 +2,72 @@
 
 Snap a photo of a room and get a paint plan:
 
-- **Square footage.** Wall area minus doors and windows, plus the ceiling if you want it.
-- **Primer or not.** Based on the color change and the wall's condition (stains, patches, bare drywall, glossy paint…).
-- **How many coats.** Usually 2. It can be 1 for a near-identical color, and 3 for bright reds and yellows.
-- **Shopping list.** Rounded to cans you can actually buy (quarts, gallons, 5-gallon buckets).
-- **Color preview.** An AI-generated picture of your room in the new color.
+- **Measurements.** Length of each wall plus wall height, with a live square-footage total. Has a quick "length × width" option for rectangular rooms, and doors and windows are subtracted automatically.
+- **Color fan.** About 9,900 colors from Sherwin-Williams, Benjamin Moore and Behr, laid out like a paper fan deck by color family. You can also search by name or code (e.g. "Alabaster" or "SW 7008").
+- **Primer and coats.** Based on the color change and the wall's condition (stains, patches, bare drywall, glossy paint…).
+- **Shopping list.** Paint and primer rounded up to whole gallons, with a note on how much will be left over.
+- **Cost estimate.** Do-it-yourself materials vs. hiring a pro (labor + materials), with prices and region you can adjust.
+- **Color preview (Pro).** An AI-generated picture of your room in the new color. Each image costs money, so it's locked behind Pro.
 
 ## How it works
 
 | Step | What does it | Needs an API key? |
 |---|---|---|
-| Read the photo: wall color, doors/windows, rough size, surface problems | Claude (Anthropic) | Yes: `ANTHROPIC_API_KEY` |
-| Work out area, primer, coats and gallons | Plain math in `lib/paintCalc.js` | No |
-| Show the room in the new color | OpenAI image editing | Yes: `OPENAI_API_KEY` |
+| Read the photo: wall color, wall lengths, doors/windows, surface problems | Claude (Anthropic) | Yes: `ANTHROPIC_API_KEY` |
+| Area, primer, coats, gallons, costs | Plain math in `shared/` (runs in the browser, so totals update as you type) | No |
+| Color catalog and fan | Static files in `public/colors/` | No |
+| Show the room in the new color (Pro only) | OpenAI image editing | Yes: `OPENAI_API_KEY` |
 
-The AI's measurements are a starting point. A photo has no built-in sense of scale, so the app shows the numbers for the user to check. Entering one real measurement, like the ceiling height, makes them much more accurate. You can also skip the photo analysis and type the measurements in yourself. That part works without any API keys.
+The AI's measurements are a starting point. A photo has no built-in sense of scale, so the app shows the numbers for the user to check. Entering one real measurement, like the ceiling height, makes them much more accurate. You can also skip the photo and type the measurements in yourself. Everything except the photo analysis and the preview works without API keys.
+
+## Pro access (the color preview)
+
+The AI preview only appears when the server has an `OPENAI_API_KEY`. Even then it's locked until the user enters a **Pro code**. Codes are listed in `.env`:
+
+```
+PRO_ACCESS_CODES=FRIEND-2026,BETA-TESTER
+PRO_DAILY_PREVIEW_LIMIT=20
+```
+
+- The server checks the code **before** reading the photo, so a free user can never trigger a paid image.
+- Each code is limited to `PRO_DAILY_PREVIEW_LIMIT` previews a day. Previews that fail don't count.
+- This is a stand-in for real accounts and payments (e.g. a Stripe subscription). When those are added, only `isPro()` in `lib/proAccess.js` needs to change.
+
+## Color catalog
+
+The colors come from the open-source [colornerd](https://github.com/jpederson/colornerd) dataset (MIT license). To rebuild the files in `public/colors/` with the latest data:
+
+```bash
+node scripts/build-colors.mjs
+```
+
+Things to know:
+- **On-screen colors are approximate.** Screens vary, so users should always check a real sample.
+- **Benjamin Moore data has gaps.** Some names are shortened ("Hale" instead of "Hale Navy"), and much of the Off-White Collection (e.g. White Dove, Chantilly Lace) is missing. The app tells users this.
+- **Before launching commercially,** check with the paint brands about using their color names and codes. Sherwin-Williams and Benjamin Moore both have partner programs that offer official, complete color data. That's the reliable long-term source, and better than scraping their websites (which their terms of use generally forbid).
+
+## Cost estimates
+
+Defaults live in `shared/costs.js` and are ballpark U.S. figures. Change them there to match your market:
+
+- Paint per gallon: Sherwin-Williams and Benjamin Moore $80, Behr $45, other $50 (typical full retail; users can edit it)
+- Primer: $35/gal
+- Pro labor: $1.50–$3.50 per sq ft of wall (2 coats), $2–$4 for ceilings, plus primer and prep, with a $250–$400 minimum job
+- "Your area" scales labor by 0.8× (lower cost), 1× (average) or 1.3× (higher cost)
 
 ## Project layout
 
 ```
-server.js            Web server and the 3 API endpoints (/api/analyze, /api/plan, /api/preview)
-lib/paintCalc.js     Paint math: area, primer, coats, gallons (no AI)
-lib/analyzePhoto.js  Sends the photo to Claude and gets structured room details back
-lib/previewColor.js  Asks the image model to repaint the walls
-public/              The phone-friendly page (HTML, CSS, JavaScript)
-test/                Automated tests for the paint math
+server.js               Web server and API endpoints
+shared/paintCalc.js     Paint math: area, primer, coats, gallons (used by browser and server)
+shared/costs.js         DIY and professional cost estimates (used by browser and server)
+lib/analyzePhoto.js     Sends the photo to Claude and gets structured room details back
+lib/previewColor.js     Asks the image model to repaint the walls
+lib/proAccess.js        Pro codes and the daily preview limit
+public/                 The phone-friendly page (HTML, CSS, JavaScript)
+public/colors/          Paint color catalog, one file per brand
+scripts/build-colors.mjs  Rebuilds the color catalog
+test/                   Automated tests
 ```
 
 ## Running it on your computer
@@ -59,14 +100,14 @@ To try it on your phone, connect it to the same Wi-Fi and open `http://<your-com
 npm test
 ```
 
-## Cost
+## Running costs
 
-Each photo analysis costs about a cent or two with Claude. Each color preview costs roughly 4–20 cents, depending on the image model and quality. Both services bill you directly through your own accounts.
+Each photo analysis costs about a cent or two with Claude. Each color preview costs roughly 4–20 cents, depending on the image model and quality. Both services bill you directly through your own accounts. Previews only run for Pro codes, up to the daily limit.
 
 ## Ideas for next steps
 
-- Paint brand color matching (e.g. look up the nearest Sherwin-Williams or Behr color)
+- Real accounts and payments for Pro (e.g. Stripe), replacing access codes
+- Match the photo's current wall color to the nearest catalog color
 - Multiple photos per room, to cover all four walls
-- Price estimate using local store prices
-- Trim and ceiling paint as separate line items
+- Trim paint as its own line item
 - Host it online so friends can use it from their phones

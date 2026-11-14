@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildPaintPlan, coatPlan, lightness, paintableArea, toCans } from "../lib/paintCalc.js";
+import { buildPaintPlan, coatPlan, lightness, paintableArea, wholeGallons } from "../shared/paintCalc.js";
 
 test("subtracts doors and windows from the wall area", () => {
   // 12x12 room = 48 ft of wall, 8 ft high = 384 sq ft, minus 1 door (21) and 2 windows (30).
@@ -69,14 +69,23 @@ test("bright reds and yellows need three coats", () => {
   }
 });
 
-test("rounds paint up to cans you can buy", () => {
-  assert.equal(toCans(0.2).label, "1 quart");
-  assert.equal(toCans(1.4).label, "1 gallon + 2 quarts");
-  assert.equal(toCans(1.6).label, "2 gallons"); // 1 gal + 3 qt rounds up
-  assert.equal(toCans(2.7).label, "3 gallons"); // 3 quarts rounds up to a gallon
-  assert.equal(toCans(3.6).label, "1 × 5-gallon bucket"); // 3 gal + 3 qt rounds to 4 gal, so a bucket
-  assert.equal(toCans(4.2).label, "1 × 5-gallon bucket");
-  assert.equal(toCans(6.1).label, "1 × 5-gallon bucket + 1 gallon + 1 quart");
+test("adds up a list of walls", () => {
+  const area = paintableArea({ wallWidthsFt: [12, 12, 10, 10], wallHeightFt: 8, doors: 0, windows: 0 });
+  assert.equal(area.totalWallWidthFt, 44);
+  assert.equal(area.grossWallSqFt, 352);
+  // Blank or zero rows are ignored.
+  assert.equal(paintableArea({ wallWidthsFt: [12, "", 0], wallHeightFt: 8 }).grossWallSqFt, 96);
+});
+
+test("rounds paint up to whole gallons and reports the leftover", () => {
+  assert.equal(wholeGallons(0.3).label, "1 gallon");
+  assert.equal(wholeGallons(2.1).label, "3 gallons");
+  assert.equal(wholeGallons(3).label, "3 gallons");
+  const g = wholeGallons(2.2, 2.1);
+  assert.equal(g.leftoverGallons, 0.9);
+  assert.match(g.note, /3 quarts/);
+  assert.equal(wholeGallons(5.5).bucketTip, true);
+  assert.equal(wholeGallons(0).gallons, 0);
 });
 
 test("full plan for a typical bedroom", () => {
@@ -89,8 +98,8 @@ test("full plan for a typical bedroom", () => {
     targetColorHex: "#7a9e7e",
     conditions: [],
   });
-  // 333 sq ft x 2 coats x 1.1 waste / 350 = 2.09 gallons
-  assert.equal(plan.paint.gallons, 2.09);
-  assert.equal(plan.paint.buy.label, "2 gallons + 1 quart");
+  // 333 sq ft x 2 coats / 350 = 1.90 gallons on the wall, 2.00 with roller loss
+  assert.equal(plan.paint.gallons, 2);
+  assert.equal(plan.paint.buy.label, "2 gallons");
   assert.equal(plan.primerAmount, null);
 });
