@@ -1,5 +1,7 @@
 # DIWHYMAN Paint Planner
 
+DIWHYMAN is starting with painting on the way to a full DIY home-repair app. For the product vision, revenue streams and build path, see [docs/VISION.md](docs/VISION.md).
+
 Snap a photo of a room and get a paint plan:
 
 - **Measurements.** Length of each wall plus wall height, with a live square-footage total. Has a quick "length × width" option for rectangular rooms, and doors and windows are subtracted automatically.
