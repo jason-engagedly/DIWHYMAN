@@ -266,8 +266,6 @@ details summary { cursor: pointer; }
 .cost strong { display: block; font-size: 1.35rem; margin: 2px 0; }
 .cost.diy { background: var(--accent-soft); }
 .cost { display: flex; flex-direction: column; min-width: 0; }
-.cost-time { margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); }
-.cost-time b { display: block; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
 
 .savings { margin: 4px 0; }
 h4 { margin: 12px 0 4px; font-size: 0.92rem; }
@@ -290,6 +288,11 @@ h4 { margin: 12px 0 4px; font-size: 0.92rem; }
 .lines li.wait { color: var(--muted); font-style: italic; }
 .lines li > span:last-child { white-space: nowrap; text-align: right; }
 .gate { margin: 8px 0 0; padding: 8px 10px; background: var(--accent-soft); border-radius: 8px; font-size: 0.88rem; }
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; background: var(--bg); }
+.seg button { width: auto; font: inherit; font-size: 0.85rem; font-weight: 600; border: 0; border-radius: 999px; padding: 6px 16px; background: none; color: var(--text); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
+.cost-toggle { margin: 4px 0 2px; }
 
 /* ---------- Pro ---------- */
 .pro-badge { font-size: 0.7rem; background: #c79a2b; color: #1f1a0e; padding: 2px 8px; border-radius: 999px; letter-spacing: 0.05em; }

@@ -55,7 +55,7 @@ Defaults live in `shared/costs.js` and are ballpark U.S. figures. Change them th
 - Primer: $35/gal
 - Pro labor: $1.50–$3.50 per sq ft of wall (2 coats), $2–$4 for ceilings, plus primer and prep, with a $250–$400 minimum job
 - "Your area" scales labor by 0.8× (lower cost), 1× (average) or 1.3× (higher cost)
-- Each option shows dollars **and** time: DIY shows your hands-on hours, and the pro option shows crew hours on site and how soon it's done. A summary line works out roughly how much money each hour of your own work saves (`compareDiyVsPro` in `shared/costs.js`).
+- A **Dollars / Time** toggle switches the DIY and pro cards between cost and time. Time view shows your hands-on hours vs. the pro crew's hours on site and how soon it's done, plus roughly how much money each hour of your own work saves (`compareDiyVsPro` in `shared/costs.js`).
 
 ## Time estimates
 

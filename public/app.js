@@ -18,6 +18,9 @@ const state = {
   bladeIndex: 0, // strip the user is looking at
   chosen: null, // { brandId, brand, code, name, hex }
   paintPriceEdited: false,
+  costView: "dollars", // or "time"
+  lastCosts: null,
+  lastHours: null,
 };
 
 const FAN_SIZE = 9; // strips shown in the fan at once
@@ -567,25 +570,33 @@ function renderHours(h) {
     <ul class="assumptions">${h.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>`;
 }
 
+// The cost cards show one measure at a time, picked with the Dollars / Time toggle.
+function costCards(c, h, cmp, range) {
+  const time = state.costView === "time";
+  const diy = time
+    ? `<strong>${formatHours(h.workHours)}</strong><small>of your time</small><small>Plan for ${escapeHtml(h.schedule.toLowerCase())}</small>`
+    : `<strong>${money(c.diy.total)}</strong><small>materials</small>`;
+  const pro = time
+    ? `<strong>${formatHours(h.proCrewHours)}</strong><small>crew on site</small><small>${escapeHtml(h.proSchedule)}</small>`
+    : `<strong>${range(c.pro.total)}</strong><small>labor + materials</small>`;
+  const summary = time
+    ? `Hiring a pro saves you <strong>${formatHours(cmp.yourHours)}</strong> of work. Doing it yourself works out to about <strong>${money(cmp.dollarsPerHour)} for every hour</strong> you put in.`
+    : `Doing it yourself saves about <strong>${range(cmp.dollarsSaved)}</strong>.`;
+  return `
+    <div class="cost-compare">
+      <div class="cost diy"><span>Do it yourself</span>${diy}</div>
+      <div class="cost pro"><span>Hire a pro</span>${pro}</div>
+    </div>
+    <p class="savings">${summary}</p>`;
+}
+
 function renderCosts(c, h) {
+  state.lastCosts = c;
+  state.lastHours = h;
   const range = ([lo, hi]) => `${money(lo)}–${money(hi)}`;
   const cmp = compareDiyVsPro(c, h);
   $("cost-body").innerHTML = `
-    <div class="cost-compare">
-      <div class="cost diy">
-        <span>Do it yourself</span>
-        <strong>${money(c.diy.total)}</strong>
-        <small>materials</small>
-        <div class="cost-time"><b>${formatHours(h.workHours)}</b><small>of your time</small><small>Plan for ${escapeHtml(h.schedule.toLowerCase())}</small></div>
-      </div>
-      <div class="cost pro">
-        <span>Hire a pro</span>
-        <strong>${range(c.pro.total)}</strong>
-        <small>labor + materials</small>
-        <div class="cost-time"><b>${formatHours(h.proCrewHours)}</b><small>crew on site</small><small>${escapeHtml(h.proSchedule)}</small></div>
-      </div>
-    </div>
-    <p class="savings">Doing it yourself saves about <strong>${range(cmp.dollarsSaved)}</strong> for <strong>${formatHours(cmp.yourHours)}</strong> of work. That's roughly <strong>${money(cmp.dollarsPerHour)} for every hour</strong> you put in.</p>
+    ${costCards(c, h, cmp, range)}
     <details><summary>Cost breakdown</summary>
       <h4>Materials</h4>
       <ul class="lines">${c.diy.lines.map((l) => `<li><span>${escapeHtml(l.label)}</span><span>${money(l.amount)}</span></li>`).join("")}</ul>
@@ -728,6 +739,17 @@ function escapeHtml(s) {
     /[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
   );
+}
+
+
+// Dollars / Time toggle for the cost cards.
+for (const view of ["dollars", "time"]) {
+  document.getElementById(`view-${view}`).addEventListener("click", () => {
+    state.costView = view;
+    document.getElementById("view-dollars").setAttribute("aria-pressed", String(view === "dollars"));
+    document.getElementById("view-time").setAttribute("aria-pressed", String(view === "time"));
+    if (state.lastCosts) renderCosts(state.lastCosts, state.lastHours);
+  });
 }
 
 init();
