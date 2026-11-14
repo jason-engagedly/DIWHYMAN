@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DIWHYMAN Paint Planner</title>
+    <meta name="description" content="Snap a photo of a room and get a paint plan." />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="top">
+      <h1>DIWHYMAN <span>Paint Planner</span></h1>
+      <p>Snap a photo of the room. We'll estimate the square footage and tell you how much paint and primer to buy.</p>
+    </header>
+
+    <main>
+      <!-- Step 1: photo -->
+      <section class="card" id="step-photo">
+        <h2><span class="num">1</span> Take a photo</h2>
+        <p class="hint">Stand in a corner and fit as much wall as you can, floor to ceiling. Daylight works best.</p>
+        <label class="photo-drop" for="photo-input">
+          <img id="photo-preview" alt="" hidden />
+          <span id="photo-placeholder">📷 Tap to take or choose a photo</span>
+        </label>
+        <input id="photo-input" type="file" accept="image/*" capture="environment" hidden />
+
+        <details class="known">
+          <summary>Know a measurement? (makes the estimate much more accurate)</summary>
+          <div class="grid2">
+            <label>Ceiling height (ft)
+              <input id="hint-ceiling" type="number" inputmode="decimal" min="0" step="0.5" placeholder="e.g. 8" />
+            </label>
+            <label>Main wall width (ft)
+              <input id="hint-width" type="number" inputmode="decimal" min="0" step="0.5" placeholder="e.g. 12" />
+            </label>
+          </div>
+        </details>
+
+        <button id="analyze-btn" class="primary" disabled>Analyze photo</button>
+        <button id="manual-btn" class="link">Skip, I'll enter measurements myself</button>
+        <p class="status" id="analyze-status" role="status"></p>
+      </section>
+
+      <!-- Step 2: check the numbers -->
+      <section class="card" id="step-room" hidden>
+        <h2><span class="num">2</span> Check the measurements</h2>
+        <p class="hint" id="confidence-note"></p>
+        <div class="grid2">
+          <label>Total wall width (ft)
+            <input id="wall-width" type="number" inputmode="decimal" min="0" step="0.5" required />
+            <small>All walls you're painting, added together</small>
+          </label>
+          <label>Wall height (ft)
+            <input id="wall-height" type="number" inputmode="decimal" min="0" step="0.5" value="8" required />
+          </label>
+          <label>Doors
+            <input id="doors" type="number" inputmode="numeric" min="0" step="1" value="1" />
+          </label>
+          <label>Windows
+            <input id="windows" type="number" inputmode="numeric" min="0" step="1" value="1" />
+          </label>
+        </div>
+
+        <label class="check">
+          <input type="checkbox" id="include-ceiling" /> Paint the ceiling too
+        </label>
+        <label id="ceiling-area-wrap" hidden>Ceiling area (sq ft)
+          <input id="ceiling-area" type="number" inputmode="decimal" min="0" step="1" />
+          <small>Room length × width</small>
+        </label>
+
+        <label>Current wall color
+          <span class="color-row">
+            <input id="current-color" type="color" value="#e8e2d4" />
+            <span id="current-color-name" class="muted">Pick the closest match</span>
+          </span>
+        </label>
+
+        <fieldset>
+          <legend>Wall condition (check anything that applies)</legend>
+          <div id="conditions"></div>
+        </fieldset>
+      </section>
+
+      <!-- Step 3: new color -->
+      <section class="card" id="step-color" hidden>
+        <h2><span class="num">3</span> Pick your new color</h2>
+        <div class="swatches" id="swatches"></div>
+        <label>Or choose any color
+          <span class="color-row">
+            <input id="target-color" type="color" value="#7a9e7e" />
+            <input id="target-name" type="text" placeholder="Color name (optional)" value="Sage green" maxlength="60" />
+          </span>
+        </label>
+        <div class="actions">
+          <button id="plan-btn" class="primary">Get my paint plan</button>
+          <button id="preview-btn" class="secondary">Show me this color</button>
+        </div>
+        <p class="status" id="plan-status" role="status"></p>
+      </section>
+
+      <!-- Results -->
+      <section class="card" id="results" hidden></section>
+
+      <section class="card" id="preview-card" hidden>
+        <h2>Your room in <span id="preview-color-label"></span></h2>
+        <div class="compare">
+          <figure><img id="before-img" alt="Your room now" /><figcaption>Now</figcaption></figure>
+          <figure><img id="after-img" alt="Your room in the new color" /><figcaption>With new paint</figcaption></figure>
+        </div>
+        <p class="hint">This is an AI-generated preview. Screens and lighting change how colors look, so always test a sample on the wall before buying.</p>
+      </section>
+    </main>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
