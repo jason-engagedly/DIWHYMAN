@@ -133,6 +133,24 @@ export function estimateCosts(plan, options = {}) {
   };
 }
 
+/**
+ * Dollars vs. time: what doing it yourself saves in money and costs in hours.
+ * @param {object} costs  Result of estimateCosts().
+ * @param {object} hours  Result of estimateHours() from shared/hours.js.
+ */
+export function compareDiyVsPro(costs, hours) {
+  const saved = costs.savings; // [low, high] dollars a pro would cost on top of DIY materials
+  const yourHours = hours.workHours; // [low, high] hands-on hours you'd spend instead
+  const midSaved = (saved[0] + saved[1]) / 2;
+  const midHours = (yourHours[0] + yourHours[1]) / 2;
+  return {
+    dollarsSaved: saved,
+    yourHours,
+    // Roughly what each hour of your own work is "worth" in money you don't pay a pro.
+    dollarsPerHour: midHours > 0 ? Math.round(midSaved / midHours / 5) * 5 : 0,
+  };
+}
+
 function positive(n) {
   const v = Number(n);
   return v > 0 ? v : null;

@@ -1,6 +1,6 @@
 // Runs in the user's browser: photo, measurements, color fan, plan, costs and the Pro preview.
 import { buildPaintPlan, paintableArea, CONDITIONS } from "/shared/paintCalc.js";
-import { estimateCosts, COST_DEFAULTS, money } from "/shared/costs.js";
+import { estimateCosts, compareDiyVsPro, COST_DEFAULTS, money } from "/shared/costs.js";
 import { estimateHours, formatHours } from "/shared/hours.js";
 
 const $ = (id) => document.getElementById(id);
@@ -492,8 +492,9 @@ function updateAll() {
   });
   const wasHidden = $("results").hidden;
   renderPlan(plan);
-  renderHours(estimateHours(plan, room));
-  renderCosts(costs);
+  const hours = estimateHours(plan, room);
+  renderHours(hours);
+  renderCosts(costs, hours);
   $("results").hidden = false;
   if (wasHidden) $("results").scrollIntoView({ behavior: "smooth" });
 }
@@ -566,22 +567,25 @@ function renderHours(h) {
     <ul class="assumptions">${h.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>`;
 }
 
-function renderCosts(c) {
+function renderCosts(c, h) {
   const range = ([lo, hi]) => `${money(lo)}–${money(hi)}`;
+  const cmp = compareDiyVsPro(c, h);
   $("cost-body").innerHTML = `
     <div class="cost-compare">
       <div class="cost diy">
         <span>Do it yourself</span>
         <strong>${money(c.diy.total)}</strong>
         <small>materials</small>
+        <div class="cost-time"><b>${formatHours(h.workHours)}</b><small>of your time</small><small>Plan for ${escapeHtml(h.schedule.toLowerCase())}</small></div>
       </div>
       <div class="cost pro">
         <span>Hire a pro</span>
         <strong>${range(c.pro.total)}</strong>
         <small>labor + materials</small>
+        <div class="cost-time"><b>${formatHours(h.proCrewHours)}</b><small>crew on site</small><small>${escapeHtml(h.proSchedule)}</small></div>
       </div>
     </div>
-    <p class="savings">Doing it yourself saves about <strong>${range(c.savings)}</strong>.</p>
+    <p class="savings">Doing it yourself saves about <strong>${range(cmp.dollarsSaved)}</strong> for <strong>${formatHours(cmp.yourHours)}</strong> of work. That's roughly <strong>${money(cmp.dollarsPerHour)} for every hour</strong> you put in.</p>
     <details><summary>Cost breakdown</summary>
       <h4>Materials</h4>
       <ul class="lines">${c.diy.lines.map((l) => `<li><span>${escapeHtml(l.label)}</span><span>${money(l.amount)}</span></li>`).join("")}</ul>

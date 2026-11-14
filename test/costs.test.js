@@ -55,3 +55,17 @@ test("region changes labor but not materials", () => {
   assert.equal(low.diy.total, high.diy.total);
   assert.ok(high.pro.labor[1] > low.pro.labor[1]);
 });
+
+test("compares dollars saved with hours spent", async () => {
+  const { estimateHours } = await import("../shared/hours.js");
+  const { compareDiyVsPro } = await import("../shared/costs.js");
+  const plan = buildPaintPlan(bedroom);
+  const costs = estimateCosts(plan, { brandId: "behr" });
+  const hours = estimateHours(plan, bedroom);
+  const c = compareDiyVsPro(costs, hours);
+  assert.deepEqual(c.dollarsSaved, costs.savings);
+  assert.deepEqual(c.yourHours, hours.workHours);
+  assert.ok(c.dollarsPerHour > 0);
+  assert.equal(c.dollarsPerHour % 5, 0);
+  assert.match(hours.proSchedule, /^Done in/);
+});

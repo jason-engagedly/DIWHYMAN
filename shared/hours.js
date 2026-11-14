@@ -114,6 +114,10 @@ export function estimateHours(plan, room = {}) {
   const workHours = sumRanges(phases.map((p) => p.hours));
   const waitHours = sumRanges(phases.map((p) => p.waitHours));
   const elapsed = [workHours[0] + waitHours[0], workHours[1] + waitHours[1]];
+  const proCrewHours = [
+    quarter(workHours[0] * r.proCrewFactor[0]),
+    quarter(workHours[1] * r.proCrewFactor[1]),
+  ].map((h) => Math.max(h, 1));
 
   return {
     phases,
@@ -122,9 +126,9 @@ export function estimateHours(plan, room = {}) {
     elapsedHours: elapsed.map(quarter),
     // Half of the drying time overlaps with other things (cleaning tools, breaks, meals).
     schedule: scheduleLabel((workHours[0] + workHours[1]) / 2 + (waitHours[0] + waitHours[1]) / 4),
-    proCrewHours: [quarter(workHours[0] * r.proCrewFactor[0]), quarter(workHours[1] * r.proCrewFactor[1])].map(
-      (h) => Math.max(h, 1),
-    ),
+    proCrewHours,
+    // Pros schedule around most of the drying (other rooms, fast-dry products).
+    proSchedule: proScheduleLabel((proCrewHours[0] + proCrewHours[1]) / 2 + (waitHours[0] + waitHours[1]) / 4),
     notes: [
       "Times depend on experience. If you've painted before, expect the lower end. If it's your first time, plan for the higher end. A helper cuts the work time roughly in half.",
       "Drying times are for latex paint at room temperature. Humid or cold rooms take longer.",
@@ -159,6 +163,11 @@ function scheduleLabel(typicalHours) {
   if (typicalHours <= 13) return "One long day, or a relaxed weekend";
   if (typicalHours <= 20) return "A weekend";
   return `About ${Math.ceil(typicalHours / 8)} days`;
+}
+
+function proScheduleLabel(typicalHours) {
+  if (typicalHours <= 10) return "Done in 1 day";
+  return `Done in about ${Math.ceil(typicalHours / 8)} days`;
 }
 
 /**
