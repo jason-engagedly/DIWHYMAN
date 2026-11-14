@@ -6,6 +6,7 @@ Snap a photo of a room and get a paint plan:
 - **Color fan.** About 9,900 colors from Sherwin-Williams, Benjamin Moore and Behr, laid out like a paper fan deck by color family. You can also search by name or code (e.g. "Alabaster" or "SW 7008").
 - **Primer and coats.** Based on the color change and the wall's condition (stains, patches, bare drywall, glossy paint…).
 - **Shopping list.** Paint and primer rounded up to whole gallons, with a note on how much will be left over.
+- **Time estimate.** Hours broken into gated phases (Prep → Coatings → Cleanup), each with its tasks, drying waits and a "ready when" checkpoint before the next phase. Also a total ("A weekend") and a pro-crew comparison.
 - **Cost estimate.** Do-it-yourself materials vs. hiring a pro (labor + materials), with prices and region you can adjust.
 - **Color preview (Pro).** An AI-generated picture of your room in the new color. Each image costs money, so it's locked behind Pro.
 
@@ -14,7 +15,7 @@ Snap a photo of a room and get a paint plan:
 | Step | What does it | Needs an API key? |
 |---|---|---|
 | Read the photo: wall color, wall lengths, doors/windows, surface problems | Claude (Anthropic) | Yes: `ANTHROPIC_API_KEY` |
-| Area, primer, coats, gallons, costs | Plain math in `shared/` (runs in the browser, so totals update as you type) | No |
+| Area, primer, coats, gallons, hours, costs | Plain math in `shared/` (runs in the browser, so totals update as you type) | No |
 | Color catalog and fan | Static files in `public/colors/` | No |
 | Show the room in the new color (Pro only) | OpenAI image editing | Yes: `OPENAI_API_KEY` |
 
@@ -55,12 +56,23 @@ Defaults live in `shared/costs.js` and are ballpark U.S. figures. Change them th
 - Pro labor: $1.50–$3.50 per sq ft of wall (2 coats), $2–$4 for ceilings, plus primer and prep, with a $250–$400 minimum job
 - "Your area" scales labor by 0.8× (lower cost), 1× (average) or 1.3× (higher cost)
 
+## Time estimates
+
+Working speeds live in `shared/hours.js` (`HOUR_RATES`) and assume one first-time painter:
+
+- Rolling walls, including cutting in edges: 130–200 sq ft per hour per coat (ceilings 80–120)
+- Taping: 80–150 ft per hour, along the floor and ceiling lines plus around each door and window
+- Repairs, sanding and wallpaper stripping are added only when that wall condition is checked
+- Drying: 2–4 hrs between coats, 1–3 hrs for primer, 1–2 hrs for spackle
+- A 2-person pro crew does the hands-on work in roughly 25–35% of the DIY time
+
 ## Project layout
 
 ```
 server.js               Web server and API endpoints
 shared/paintCalc.js     Paint math: area, primer, coats, gallons (used by browser and server)
 shared/costs.js         DIY and professional cost estimates (used by browser and server)
+shared/hours.js         Time estimate by phase: Prep, Coatings, Cleanup
 lib/analyzePhoto.js     Sends the photo to Claude and gets structured room details back
 lib/previewColor.js     Asks the image model to repaint the walls
 lib/proAccess.js        Pro codes and the daily preview limit

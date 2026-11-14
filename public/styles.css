@@ -270,6 +270,23 @@ h4 { margin: 12px 0 4px; font-size: 0.92rem; }
 .lines { list-style: none; padding: 0; margin: 0; }
 .lines li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px dashed var(--line); font-size: 0.9rem; }
 
+/* ---------- Time estimate ---------- */
+.big-numbers .schedule { font-size: 0.95rem; line-height: 1.25; padding-top: 4px; }
+.phases { list-style: none; padding: 0; margin: 8px 0; }
+.phase { position: relative; padding: 0 0 14px 38px; }
+.phase::before { content: ""; position: absolute; left: 13px; top: 30px; bottom: 0; border-left: 2px dashed var(--line); }
+.phase:last-child::before { display: none; }
+.phase-head { display: flex; align-items: center; gap: 8px; margin-left: -38px; }
+.phase-num {
+  display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent-soft); color: var(--text); border: 2px solid var(--accent); font-weight: 700; font-size: 0.85rem;
+}
+.phase-hours { margin-left: auto; font-weight: 600; }
+.phase .lines { margin-top: 6px; }
+.lines li.wait { color: var(--muted); font-style: italic; }
+.lines li > span:last-child { white-space: nowrap; text-align: right; }
+.gate { margin: 8px 0 0; padding: 8px 10px; background: var(--accent-soft); border-radius: 8px; font-size: 0.88rem; }
+
 /* ---------- Pro ---------- */
 .pro-badge { font-size: 0.7rem; background: #c79a2b; color: #1f1a0e; padding: 2px 8px; border-radius: 999px; letter-spacing: 0.05em; }
 #pro-locked p { margin: 6px 0; }

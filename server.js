@@ -8,6 +8,7 @@ import { analyzeRoomPhoto } from "./lib/analyzePhoto.js";
 import { previewWallColor } from "./lib/previewColor.js";
 import { buildPaintPlan } from "./shared/paintCalc.js";
 import { estimateCosts } from "./shared/costs.js";
+import { estimateHours } from "./shared/hours.js";
 import { isPro, usePreview, refundPreview, PRO_DAILY_LIMIT } from "./lib/proAccess.js";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -55,11 +56,11 @@ app.post("/api/analyze", upload.single("photo"), async (req, res, next) => {
   }
 });
 
-// 2. Room numbers + colors in, paint plan and cost estimate out. Pure math, no AI.
+// 2. Room numbers + colors in, paint plan, time and cost estimates out. Pure math, no AI.
 app.post("/api/plan", (req, res) => {
   try {
     const plan = buildPaintPlan(req.body);
-    res.json({ ...plan, costs: estimateCosts(plan, req.body) });
+    res.json({ ...plan, hours: estimateHours(plan, req.body), costs: estimateCosts(plan, req.body) });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

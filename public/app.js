@@ -1,6 +1,7 @@
 // Runs in the user's browser: photo, measurements, color fan, plan, costs and the Pro preview.
 import { buildPaintPlan, paintableArea, CONDITIONS } from "/shared/paintCalc.js";
 import { estimateCosts, COST_DEFAULTS, money } from "/shared/costs.js";
+import { estimateHours, formatHours } from "/shared/hours.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -491,6 +492,7 @@ function updateAll() {
   });
   const wasHidden = $("results").hidden;
   renderPlan(plan);
+  renderHours(estimateHours(plan, room));
   renderCosts(costs);
   $("results").hidden = false;
   if (wasHidden) $("results").scrollIntoView({ behavior: "smooth" });
@@ -525,6 +527,43 @@ function renderPlan(p) {
       <ul class="reasons">${p.reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul>
       <ul class="assumptions">${p.assumptions.map((a) => `<li>${escapeHtml(a)}</li>`).join("")}</ul>
     </details>`;
+}
+
+function renderHours(h) {
+  const phases = h.phases
+    .map((p, i) => {
+      const next = h.phases[i + 1];
+      const tasks = p.tasks
+        .map((t) => `<li><span>${escapeHtml(t.name)}</span><span>${formatHours(t.hours)}</span></li>`)
+        .join("");
+      const waits = p.waits
+        .map(
+          (w) =>
+            `<li class="wait"><span>⏳ ${escapeHtml(w.name)}</span><span>${formatHours(w.hours)}</span></li>`,
+        )
+        .join("");
+      return `
+        <li class="phase">
+          <div class="phase-head">
+            <span class="phase-num">${i + 1}</span>
+            <strong>${escapeHtml(p.name)}</strong>
+            <span class="phase-hours">${formatHours(p.hours)}</span>
+          </div>
+          <ul class="lines">${tasks}${waits}</ul>
+          <p class="gate"><strong>✅ ${next ? `Ready for ${escapeHtml(next.name)} when` : "Done when"}:</strong> ${escapeHtml(p.gate)}</p>
+        </li>`;
+    })
+    .join("");
+
+  $("hours-body").innerHTML = `
+    <div class="big-numbers">
+      <div><strong>${formatHours(h.workHours).replace(/ hrs?$/, "")}</strong><span>hours of work</span></div>
+      <div><strong>${formatHours(h.waitHours).replace(/ hrs?$/, "")}</strong><span>hours drying</span></div>
+      <div><strong class="schedule">${escapeHtml(h.schedule)}</strong><span>plan for</span></div>
+    </div>
+    <ol class="phases">${phases}</ol>
+    <p class="hint">A 2-person pro crew: about <strong>${formatHours(h.proCrewHours)}</strong> on site, plus drying time.</p>
+    <ul class="assumptions">${h.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>`;
 }
 
 function renderCosts(c) {
