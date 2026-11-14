@@ -126,8 +126,8 @@ export function estimateHours(plan, room = {}) {
       (h) => Math.max(h, 1),
     ),
     notes: [
-      "Hands-on hours are for one person doing it for the first time. A helper cuts the time roughly in half.",
-      "Drying times are for latex paint at room temperature. Humid or cold rooms dry slower.",
+      "Times depend on experience. If you've painted before, expect the lower end. If it's your first time, plan for the higher end. A helper cuts the work time roughly in half.",
+      "Drying times are for latex paint at room temperature. Humid or cold rooms take longer.",
     ],
   };
 }
@@ -161,18 +161,17 @@ function scheduleLabel(typicalHours) {
   return `About ${Math.ceil(typicalHours / 8)} days`;
 }
 
-/** Formats hours for display: 1.5 → "1½ hrs", [1, 2.25] → "1–2¼ hrs". */
+/**
+ * Formats hours for display in whole hours, which reads more cleanly than fractions:
+ * [1.25, 2.75] → "1–3 hrs", [0.25, 0.5] → "Under 1 hr", [2, 2.25] → "2 hrs".
+ * The math underneath stays exact; only the display is rounded.
+ */
 export function formatHours(value) {
-  const one = (h) => {
-    const whole = Math.floor(h);
-    const frac = { 0: "", 0.25: "¼", 0.5: "½", 0.75: "¾" }[Math.round((h - whole) * 4) / 4] ?? "";
-    if (whole === 0 && frac) return frac;
-    return `${whole}${frac}`;
-  };
-  if (Array.isArray(value)) {
-    const [lo, hi] = value;
-    const unit = hi <= 1 ? "hr" : "hrs";
-    return lo === hi ? `${one(lo)} ${unit}` : `${one(lo)}–${one(hi)} ${unit}`;
-  }
-  return `${one(value)} ${value <= 1 ? "hr" : "hrs"}`;
+  const [lo, hi] = Array.isArray(value) ? value : [value, value];
+  if (hi <= 0) return "0 hrs";
+  if (hi < 0.75) return "Under 1 hr";
+  const low = Math.max(1, Math.round(lo));
+  const high = Math.max(low, Math.round(hi));
+  if (low === high) return `${low} ${low === 1 ? "hr" : "hrs"}`;
+  return `${low}–${high} hrs`;
 }

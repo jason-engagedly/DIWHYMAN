@@ -65,6 +65,7 @@ Working speeds live in `shared/hours.js` (`HOUR_RATES`) and assume one first-tim
 - Repairs, sanding and wallpaper stripping are added only when that wall condition is checked
 - Drying: 2–4 hrs between coats, 1–3 hrs for primer, 1–2 hrs for spackle
 - A 2-person pro crew does the hands-on work in roughly 25–35% of the DIY time
+- Times are calculated exactly but shown in whole hours ("1–3 hrs", "Under 1 hr"), with a note that experienced painters will land at the low end and first-timers at the high end
 
 ## Project layout
 

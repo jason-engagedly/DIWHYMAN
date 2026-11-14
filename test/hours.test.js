@@ -68,9 +68,13 @@ test("a pro crew is much faster than DIY", () => {
   assert.ok(h.proCrewHours[1] < h.workHours[0]);
 });
 
-test("formats hours with fractions", () => {
-  assert.equal(formatHours([1, 2.25]), "1–2¼ hrs");
-  assert.equal(formatHours([0.25, 0.5]), "¼–½ hr");
-  assert.equal(formatHours([2, 2]), "2 hrs");
-  assert.equal(formatHours(1.5), "1½ hrs");
+test("formats hours as whole hours", () => {
+  assert.equal(formatHours([1, 2.25]), "1–2 hrs");
+  assert.equal(formatHours([1.25, 2.75]), "1–3 hrs");
+  assert.equal(formatHours([0.25, 0.5]), "Under 1 hr");
+  assert.equal(formatHours([0.5, 1]), "1 hr");
+  assert.equal(formatHours([2, 2.25]), "2 hrs");
+  assert.equal(formatHours([10.25, 17.75]), "10–18 hrs");
+  assert.equal(formatHours(1.5), "2 hrs");
+  assert.equal(formatHours([0, 0]), "0 hrs");
 });
