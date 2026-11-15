@@ -66,7 +66,7 @@ Painting is the first job type, chosen because it's common, low-risk and easy to
 | Experience asked per task (e.g. painting, drywall patching), with hands-on times tuned to each answer | Done |
 | Task catalog with difficulty ratings across 6 categories (see section 5) | Done; only painting and drywall patching are live |
 | Cost estimate: DIY materials vs. pro labor + materials, with Dollars / Time toggle | Done |
-| AI preview of the room in the new color | Built, Pro-only, not yet tested live |
+| AI preview of the room in the new color | Done, Pro-only. Tested live with OpenAI (`gpt-image-2`): about 11 seconds per image |
 | Pro access via access codes | Done (stand-in until real payments) |
 | Interactive demo of a sample 10 × 10 bedroom | Done |
 
@@ -165,7 +165,7 @@ These numbers decide whether the business works, and none have been measured yet
 - Step-by-step guide for each phase, with video links
 - Shopping list with product links (placeholders until affiliate accounts are approved)
 - "Get quotes from local painters" button
-- First live test of photo analysis and the AI preview with real API keys
+- First live test of photo analysis with a real API key (the AI preview passed its live test)
 
 ### Phase 2: Ready for real users
 
@@ -222,3 +222,4 @@ These numbers decide whether the business works, and none have been measured yet
 | 2026-11-14 | First version: vision, current painting prototype, revenue streams, build path, risks. |
 | 2026-11-15 | Added holes, cracks and gaps (photo check, fix advice, safety flags) and standard sanding steps to painting. |
 | 2026-11-15 | Added the task catalog with difficulty ratings, and experience asked per task with times tuned to each answer. |
+| 2026-11-15 | OpenAI connected; the AI room preview passed its first live test. |
