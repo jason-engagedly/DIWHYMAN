@@ -3,6 +3,7 @@ import { buildPaintPlan, paintableArea, CONDITIONS } from "/shared/paintCalc.js"
 import { estimateCosts, compareDiyVsPro, COST_DEFAULTS, money } from "/shared/costs.js";
 import { estimateHours, formatHours } from "/shared/hours.js";
 import { planRepairs, REPAIR_TYPES } from "/shared/repairs.js";
+import { TASKS, EXPERIENCE_LEVELS, difficultyLabel } from "/shared/tasks.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -20,6 +21,7 @@ const state = {
   chosen: null, // { brandId, brand, code, name, hex }
   paintPriceEdited: false,
   repairPhotos: [], // resized close-ups of holes, cracks and gaps
+  experience: {}, // per task, e.g. { interior_painting: "some", drywall_patching: "new" }
   costView: "dollars", // or "time"
   lastCosts: null,
   lastHours: null,
@@ -33,6 +35,7 @@ const BLADE_LENGTH = 7; // chips per strip, like a paper fan deck
 
 async function init() {
   renderConditions();
+  renderExperience(planRepairs([]));
   addWallRow();
   addWallRow();
   $("primer-price").value = COST_DEFAULTS.primerPerGallon;
@@ -223,6 +226,7 @@ function readRoom() {
   if (repairPlan.needsSpotPrime && !conditions.includes("patches")) conditions.push("patches");
   return {
     repairPlan,
+    experience: state.experience,
     wallWidthsFt: [...document.querySelectorAll("#walls input")].map((i) => Number(i.value) || 0),
     wallHeightFt: Number($("wall-height").value),
     doors: Number($("doors").value),
@@ -248,6 +252,77 @@ function renderAreaTotal(room) {
     <div class="total-line"><span>Doors &amp; windows</span><span>− ${fmt(a.openingsSqFt)} sq ft</span></div>
     ${a.ceilingSqFt ? `<div class="total-line"><span>Ceiling</span><span>+ ${fmt(a.ceilingSqFt)} sq ft</span></div>` : ""}
     <div class="total-line grand"><span>Total to paint</span><span>${fmt(a.totalSqFt)} sq ft</span></div>`;
+}
+
+// ---------------------------------------------------------------- Experience, asked per task
+
+// Tasks in this job: painting always; drywall patching when the repairs include it.
+function jobTasks(repairPlan) {
+  const ids = ["interior_painting"];
+  for (const skill of repairPlan?.skills || []) if (!ids.includes(skill)) ids.push(skill);
+  return ids;
+}
+
+function experiencePicker(taskId) {
+  const options = Object.entries(EXPERIENCE_LEVELS)
+    .map(
+      ([level, l]) =>
+        `<button type="button" role="radio" aria-checked="${state.experience[taskId] === level}" data-exp-task="${taskId}" data-exp-level="${level}">
+          <strong>${l.label}</strong><small>${l.hint}</small>
+        </button>`,
+    )
+    .join("");
+  return `<div class="experience">
+      <p class="exp-q"><strong>${escapeHtml(TASKS[taskId].question)}</strong>
+      <small>Your answer tunes the time estimates for this task.</small></p>
+      <div class="exp-options" role="radiogroup" aria-label="${escapeHtml(TASKS[taskId].question)}">${options}</div>
+    </div>`;
+}
+
+function renderExperience(repairPlan) {
+  const tasks = jobTasks(repairPlan);
+  for (const slot of document.querySelectorAll(".exp-slot")) {
+    const taskId = slot.id.replace("exp-", "");
+    slot.innerHTML = tasks.includes(taskId) ? experiencePicker(taskId) : "";
+  }
+}
+
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-exp-task]");
+  if (btn) {
+    state.experience = { ...state.experience, [btn.dataset.expTask]: btn.dataset.expLevel };
+    updateAll();
+    return;
+  }
+  const change = e.target.closest("[data-goto-exp]");
+  if (change) $(`exp-${change.dataset.gotoExp}`).scrollIntoView({ behavior: "smooth", block: "center" });
+});
+
+function difficultyHtml(repairPlan) {
+  const tasks = jobTasks(repairPlan);
+  const parts = tasks.map((id) => `${TASKS[id].name}: ${difficultyLabel(TASKS[id].difficulty)}`);
+  const hardestRepair = repairPlan?.repairs
+    .filter((r) => !r.proRecommended)
+    .sort((a, b) => b.difficulty - a.difficulty)[0];
+  const overall = Math.max(...tasks.map((id) => TASKS[id].difficulty), hardestRepair?.difficulty || 0);
+  const hardestNote =
+    hardestRepair && hardestRepair.difficulty > Math.max(...tasks.map((id) => TASKS[id].difficulty))
+      ? ` Hardest part: ${escapeHtml(hardestRepair.label.toLowerCase())} (${difficultyLabel(hardestRepair.difficulty).toLowerCase()}).`
+      : "";
+  return `<p class="difficulty"><span class="diff-pill d${overall}">${difficultyLabel(overall)}</span>
+    <small>${escapeHtml(parts.join(" · "))}.${hardestNote}</small></p>`;
+}
+
+function tunedForHtml() {
+  const tasks = jobTasks(planRepairs(readRepairs()));
+  const answered = tasks.filter((id) => state.experience[id]);
+  if (!answered.length) {
+    return `<p class="tuned">These are full ranges. <button type="button" class="link inline" data-goto-exp="interior_painting">Tell us your experience</button> to narrow them.</p>`;
+  }
+  const parts = answered.map((id) => `${TASKS[id].name.toLowerCase()}: ${EXPERIENCE_LEVELS[state.experience[id]].label.toLowerCase()}`);
+  const missing = tasks.find((id) => !state.experience[id]);
+  return `<p class="tuned">Tuned for ${escapeHtml(parts.join(", "))}.
+    <button type="button" class="link inline" data-goto-exp="${missing || answered[0]}">${missing ? `Add your ${escapeHtml(TASKS[missing].name.toLowerCase())} experience` : "Change"}</button></p>`;
 }
 
 // ---------------------------------------------------------------- Step 3: holes, cracks and gaps
@@ -316,9 +391,6 @@ function renderRepairAdvice(repairPlan) {
   $("repair-advice").innerHTML = `<h3>How to fix them</h3><ul class="advice-list">${items}</ul>`;
 }
 
-function difficultyLabel(level) {
-  return ["", "Easy", "Easy to moderate", "Moderate", "Advanced", "Pro job"][level] || "";
-}
 
 function repairWarningsHtml(repairPlan) {
   const serious = repairPlan?.warnings.filter((w) => w.proRecommended) || [];
@@ -622,6 +694,7 @@ function updateAll() {
   const room = readRoom();
   renderAreaTotal(room);
   renderRepairAdvice(room.repairPlan);
+  renderExperience(room.repairPlan);
   if (!state.chosen) return;
 
   let plan;
@@ -668,6 +741,7 @@ function renderPlan(p, repairPlan) {
   shopping.push("<li>Painter's tape, drop cloths, fine-grit sanding sponges (180–220 grit), a 9\" roller with 3/8\" nap, a tray and a 2\" angled brush</li>");
 
   $("plan-body").innerHTML = `
+    ${difficultyHtml(repairPlan)}
     <div class="big-numbers">
       <div><strong>${Math.round(p.area.totalSqFt)}</strong><span>sq ft to paint</span></div>
       <div><strong>${p.coats}</strong><span>coat${p.coats > 1 ? "s" : ""} of paint</span></div>
@@ -711,6 +785,7 @@ function renderHours(h) {
     .join("");
 
   $("hours-body").innerHTML = `
+    ${tunedForHtml()}
     <div class="big-numbers">
       <div><strong>${formatHours(h.workHours).replace(/ hrs?$/, "")}</strong><span>hours of work</span></div>
       <div><strong>${formatHours(h.waitHours).replace(/ hrs?$/, "")}</strong><span>hours drying</span></div>

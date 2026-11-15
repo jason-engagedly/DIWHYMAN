@@ -7,6 +7,8 @@ Snap a photo of a room and get a paint plan:
 - **Measurements.** Length of each wall plus wall height, with a live square-footage total. Has a quick "length × width" option for rectangular rooms, and doors and windows are subtracted automatically.
 - **Color fan.** About 9,900 colors from Sherwin-Williams, Benjamin Moore and Behr, laid out like a paper fan deck by color family. You can also search by name or code (e.g. "Alabaster" or "SW 7008").
 - **Holes, cracks and gaps.** Add close-up photos (or a list by hand) and each spot gets the right fix: caulk for gaps along trim and corner cracks, spackle for nail holes, a mesh patch for medium holes, tape for wall cracks. Water damage and wide or diagonal cracks get a "have a pro look first" warning. Repairs flow into the materials, hours and costs.
+- **Experience per task.** "How much interior painting have you done?" (and drywall patching, when the repairs need it). Hands-on hours narrow to match each answer.
+- **Difficulty rating.** Each job shows its difficulty, from a task catalog in `shared/tasks.js` that also covers planned plumbing, electrical, carpentry, flooring and outdoor tasks.
 - **Sanding built in.** A light sand of all walls before the wipe-down, and a light sand between every coat.
 - **Primer and coats.** Based on the color change and the wall's condition (stains, patches, bare drywall, glossy paint…).
 - **Shopping list.** Paint and primer rounded up to whole gallons, with a note on how much will be left over.
@@ -82,6 +84,7 @@ shared/paintCalc.js     Paint math: area, primer, coats, gallons (used by browse
 shared/costs.js         DIY and professional cost estimates (used by browser and server)
 shared/hours.js         Time estimate by phase: Prep, Coatings, Cleanup
 shared/repairs.js       Holes, cracks and gaps: fix, materials, time and pro price per repair
+shared/tasks.js         Task catalog: categories, difficulty ratings, safety levels, experience questions
 lib/analyzePhoto.js     Sends the photo to Claude and gets structured room details back
 lib/analyzeImperfections.js  Sends close-ups of damage to Claude and gets a list of repairs back
 lib/previewColor.js     Asks the image model to repaint the walls

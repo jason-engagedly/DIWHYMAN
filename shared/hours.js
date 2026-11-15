@@ -27,10 +27,19 @@ export const HOUR_RATES = {
 /**
  * @param {object} plan  Result of buildPaintPlan().
  * @param {object} room  The same input given to buildPaintPlan (doors, windows, conditions),
- *                      plus optional repairPlan from planRepairs() in shared/repairs.js.
+ *                      plus optional repairPlan from planRepairs() in shared/repairs.js,
+ *                      plus optional experience per task, e.g.
+ *                      { interior_painting: "some", drywall_patching: "new" } (keys from shared/tasks.js).
  */
 export function estimateHours(plan, room = {}) {
   const r = HOUR_RATES;
+  const experience = room.experience || {};
+  // Hands-on time narrows to the user's experience with that task; drying time doesn't change.
+  const task = (name, hours, skill = "interior_painting") => {
+    const base = hours.map(quarter);
+    return { name, skill, baseHours: base, hours: rangeForExperience(base, experience[skill]).map(quarter) };
+  };
+  const wait = (name, hours) => ({ name, hours: hours.map(quarter) });
   const conditions = new Set(room.conditions || []);
   const doors = Math.max(0, Math.round(Number(room.doors) || 0));
   const windows = Math.max(0, Math.round(Number(room.windows) || 0));
@@ -50,7 +59,7 @@ export function estimateHours(plan, room = {}) {
   }
   if (conditions.has("cracks_or_peeling")) prep.push(task("Scrape loose paint and fill cracks", [1, 3]));
   if (repairPlan) {
-    for (const t of repairPlan.tasks) prep.push(task(t.name, t.hours));
+    for (const t of repairPlan.tasks) prep.push(task(t.name, t.hours, t.skill || "interior_painting"));
   } else if (conditions.has("patches")) {
     prep.push(task("Fill holes and sand patches smooth", [0.5, 1.5]));
   }
@@ -65,19 +74,19 @@ export function estimateHours(plan, room = {}) {
   prep.push(task("Tape edges, outlets and trim", perRate(tapeFt, r.tapeFtPerHour)));
 
   // Repairs and scraped spots all dry at the same time, so there's one drying wait.
-  const prepWaits = (repairPlan?.waits || []).map((w) => task(w.name, w.hours));
+  const prepWaits = (repairPlan?.waits || []).map((w) => wait(w.name, w.hours));
   const fillsSpackle = conditions.has("cracks_or_peeling") || (!repairPlan && conditions.has("patches"));
-  if (!prepWaits.length && fillsSpackle) prepWaits.push(task("Spackle dries before sanding", r.spackleWait));
+  if (!prepWaits.length && fillsSpackle) prepWaits.push(wait("Spackle dries before sanding", r.spackleWait));
 
   // ---------------- Coatings
   const coatings = [];
   const coatingWaits = [];
   if (plan.primer === "full") {
     coatings.push(task("Prime walls" + (ceilingSqFt ? " and ceiling" : ""), perRate(plan.area.totalSqFt, r.primerSqFtPerHour)));
-    coatingWaits.push(task("Primer dries", r.primerWait));
+    coatingWaits.push(wait("Primer dries", r.primerWait));
   } else if (plan.primer === "spot") {
     coatings.push(task("Spot-prime patched areas", [0.25, 0.75]));
-    coatingWaits.push(task("Primer dries", r.primerWait));
+    coatingWaits.push(wait("Primer dries", r.primerWait));
   }
   // A quick light sand once each coat (and full primer) is dry gives a smoother finish.
   const sandBetween = perRate(wallSqFt, r.sandBetweenCoatsSqFtPerHour);
@@ -91,7 +100,7 @@ export function estimateHours(plan, room = {}) {
     }
     coatings.push(task(`${label}: cut in edges and roll walls`, perRate(wallSqFt, r.wallSqFtPerHourPerCoat)));
     if (coat < plan.coats) {
-      coatingWaits.push(task(`Coat ${coat} dries before recoating`, r.recoatWait));
+      coatingWaits.push(wait(`Coat ${coat} dries before recoating`, r.recoatWait));
       coatings.push(task(`Light sand coat ${coat} (220 grit) and wipe off dust`, sandBetween));
     }
   }
@@ -129,20 +138,25 @@ export function estimateHours(plan, room = {}) {
   ].map((p) => ({
     ...p,
     hours: sumRanges(p.tasks.map((t) => t.hours)),
+    baseHours: sumRanges(p.tasks.map((t) => t.baseHours)),
     waitHours: sumRanges(p.waits.map((t) => t.hours)),
   }));
 
   const workHours = sumRanges(phases.map((p) => p.hours));
   const waitHours = sumRanges(phases.map((p) => p.waitHours));
   const elapsed = [workHours[0] + waitHours[0], workHours[1] + waitHours[1]];
+  // A pro's speed doesn't depend on the user's experience, so use the full DIY range.
+  const baseWorkHours = sumRanges(phases.map((p) => p.baseHours));
   const proCrewHours = [
-    quarter(workHours[0] * r.proCrewFactor[0]),
-    quarter(workHours[1] * r.proCrewFactor[1]),
+    quarter(baseWorkHours[0] * r.proCrewFactor[0]),
+    quarter(baseWorkHours[1] * r.proCrewFactor[1]),
   ].map((h) => Math.max(h, 1));
+  const tuned = Object.values(experience).some(Boolean);
 
   return {
     phases,
     workHours,
+    baseWorkHours,
     waitHours,
     elapsedHours: elapsed.map(quarter),
     // Half of the drying time overlaps with other things (cleaning tools, breaks, meals).
@@ -151,14 +165,25 @@ export function estimateHours(plan, room = {}) {
     // Pros schedule around most of the drying (other rooms, fast-dry products).
     proSchedule: proScheduleLabel((proCrewHours[0] + proCrewHours[1]) / 2 + (waitHours[0] + waitHours[1]) / 4),
     notes: [
-      "Times depend on experience. If you've painted before, expect the lower end. If it's your first time, plan for the higher end. A helper cuts the work time roughly in half.",
+      tuned
+        ? "Hands-on times are tuned to the experience you picked for each task. A helper cuts the work time roughly in half."
+        : "Times depend on experience. If you've done this before, expect the lower end. If it's your first time, plan for the higher end. A helper cuts the work time roughly in half.",
       "Drying times are for latex paint at room temperature. Humid or cold rooms take longer.",
     ],
   };
 }
 
-function task(name, hours) {
-  return { name, hours: hours.map(quarter) };
+/**
+ * Narrows a [low, high] hours range to the part that fits the user's experience:
+ * confident → the lower half, some → the middle half, new → the upper half.
+ * With no answer, the full range is returned.
+ */
+export function rangeForExperience([lo, hi], level) {
+  const span = hi - lo;
+  if (level === "confident") return [lo, lo + span / 2];
+  if (level === "some") return [lo + span / 4, hi - span / 4];
+  if (level === "new") return [lo + span / 2, hi];
+  return [lo, hi];
 }
 
 /** Amount ÷ [fast, slow] rate → [low, high] hours, with at least a quarter hour. */

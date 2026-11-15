@@ -63,6 +63,8 @@ Painting is the first job type, chosen because it's common, low-risk and easy to
 | Safety flags: water damage and wide or diagonal cracks get "have a pro look first" | Done |
 | Sanding as a standard step: light sand before the wipe-down, and between every coat | Done |
 | Time estimate in phases (Prep → Coatings → Cleanup) with checkpoints | Done |
+| Experience asked per task (e.g. painting, drywall patching), with hands-on times tuned to each answer | Done |
+| Task catalog with difficulty ratings across 6 categories (see section 5) | Done; only painting and drywall patching are live |
 | Cost estimate: DIY materials vs. pro labor + materials, with Dollars / Time toggle | Done |
 | AI preview of the room in the new color | Built, Pro-only, not yet tested live |
 | Pro access via access codes | Done (stand-in until real payments) |
@@ -72,7 +74,6 @@ Painting is the first job type, chosen because it's common, low-risk and easy to
 
 - Neutral wording throughout the cost comparison
 - "Why pros cost more" breakdown
-- Difficulty rating for the whole job (each repair is already rated)
 - Step-by-step guide with photos and video links
 - Shopping list with product links (affiliate)
 - "Get quotes from local painters" option
@@ -94,6 +95,28 @@ Each new job becomes a **job type**, a description of:
 - Video and guide links for each step
 
 Adding a new job then means writing a new job type, not rebuilding the app.
+
+### Task catalog, difficulty and experience
+
+The app keeps a catalog of DIY tasks (`shared/tasks.js`) grouped into categories: Painting & walls, Plumbing, Electrical, Carpentry & doors, Flooring and Outdoor. Each task has:
+
+- **A difficulty rating** from 1 (Easy) to 5 (Pro recommended), based on four factors rated 1–5: skill needed, physical effort, cost of a mistake, and special tools.
+- **Permit likelihood:** no, sometimes, or usually (rules vary by city).
+- **Safety level:** none, "caution" (doable with care, with a specific warning), or "always hire a pro" (gas, electrical panels, roofing and similar).
+- **Its own experience question**, e.g. "How much toilet installation have you done?"
+
+**Experience is asked per task, never once for the whole app.** Someone confident at painting may never have replaced a toilet, and replacing a faucet is a very different job from fixing a running toilet. A single project can involve more than one task. A paint job with a doorknob hole asks about painting and about drywall patching, and each task's hours follow its own answer: confident users see the lower part of the range, new users the upper part. Drying time and the pro comparison don't change with experience, and safety warnings always show, whatever level someone picks.
+
+Difficulty ratings are a first pass based on common DIY guidance and should be checked with working tradespeople before launch.
+
+| Category | Example tasks (difficulty) |
+|---|---|
+| Painting & walls | Interior painting (2), drywall patching (2), wallpaper removal (2) |
+| Plumbing | Running toilet (1), leaky faucet (2), replace a faucet (3), replace a toilet (3), water heater (5, always pro) |
+| Electrical | Outlet or switch (3, caution), light fixture (3, caution), new circuit or panel (5, always pro) |
+| Carpentry & doors | Door hardware (1), hang a door (3), baseboards (3) |
+| Flooring | Regrout tile (2), click-lock flooring (3) |
+| Outdoor | Deck staining (2), gutters (2, caution), roof repair (5, always pro) |
 
 ### Likely next job types
 
@@ -198,3 +221,4 @@ These numbers decide whether the business works, and none have been measured yet
 |---|---|
 | 2026-11-14 | First version: vision, current painting prototype, revenue streams, build path, risks. |
 | 2026-11-15 | Added holes, cracks and gaps (photo check, fix advice, safety flags) and standard sanding steps to painting. |
+| 2026-11-15 | Added the task catalog with difficulty ratings, and experience asked per task with times tuned to each answer. |

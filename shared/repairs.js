@@ -18,12 +18,14 @@ export const REPAIR_MATERIALS = {
   drywall_screws: { label: "Drywall screws", price: 6 },
 };
 
+// skill: which task in shared/tasks.js this repair counts as, for the experience question.
 // short: name for dropdowns. label: full description.
 // fix: what kind of repair it is, shown as a short label to the user.
 // hoursEach: hands-on time per repair as [fast, slow]. wait: drying time before sanding/painting.
 // proEach: what a pro typically charges per repair (on top of painting), as [low, high].
 export const REPAIR_TYPES = {
   nail_holes: {
+    skill: "interior_painting",
     short: "Nail or screw holes",
     label: "Nail or screw holes",
     fix: "Spackle",
@@ -37,6 +39,7 @@ export const REPAIR_TYPES = {
     spotPrime: true,
   },
   small_holes: {
+    skill: "interior_painting",
     short: "Small holes (up to ½ in.)",
     label: "Small holes or dents (up to ½ in.)",
     fix: "Spackle",
@@ -50,6 +53,7 @@ export const REPAIR_TYPES = {
     spotPrime: true,
   },
   medium_holes: {
+    skill: "drywall_patching",
     short: "Medium holes (½–6 in.)",
     label: "Medium holes (½–6 in.), like a doorknob dent",
     fix: "Patch",
@@ -63,6 +67,7 @@ export const REPAIR_TYPES = {
     spotPrime: true,
   },
   large_holes: {
+    skill: "drywall_patching",
     short: "Large holes (over 6 in.)",
     label: "Large holes (over 6 in.)",
     fix: "New drywall",
@@ -77,6 +82,7 @@ export const REPAIR_TYPES = {
     advice: "This is an advanced repair. If you haven't done drywall work before, it's worth getting a pro quote, especially for holes over 1 ft.",
   },
   wall_cracks: {
+    skill: "drywall_patching",
     short: "Cracks in the wall",
     label: "Cracks in the flat wall",
     fix: "Tape & compound",
@@ -90,6 +96,7 @@ export const REPAIR_TYPES = {
     spotPrime: true,
   },
   corner_cracks: {
+    skill: "interior_painting",
     short: "Cracks in corners",
     label: "Cracks in inside corners (wall-to-wall or wall-to-ceiling)",
     fix: "Caulk",
@@ -103,6 +110,7 @@ export const REPAIR_TYPES = {
     spotPrime: false,
   },
   trim_gaps: {
+    skill: "interior_painting",
     short: "Gaps along trim",
     label: "Gaps along trim, baseboards or door/window casing",
     fix: "Caulk",
@@ -117,6 +125,7 @@ export const REPAIR_TYPES = {
     spotPrime: false,
   },
   nail_pops: {
+    skill: "interior_painting",
     short: "Popped nails",
     label: "Popped nails or screws (small round bumps)",
     fix: "Reset & spackle",
@@ -130,6 +139,7 @@ export const REPAIR_TYPES = {
     spotPrime: true,
   },
   water_damage: {
+    skill: null,
     short: "Water damage",
     label: "Water stains, or soft or bulging drywall",
     fix: "Find the leak first",
@@ -145,6 +155,7 @@ export const REPAIR_TYPES = {
     advice: "Have a plumber or contractor find the leak first. Painting over an active leak hides the problem, and wet drywall can grow mold.",
   },
   structural_cracks: {
+    skill: null,
     short: "Wide or diagonal cracks",
     label: "Wide or diagonal cracks (over ¼ in., from door or window corners, or growing)",
     fix: "Have a pro look",
@@ -188,7 +199,7 @@ export function planRepairs(items = []) {
       Math.max(t.hoursEach[1] > 0 ? 0.25 : 0, count * t.hoursEach[0]),
       Math.max(t.hoursEach[1] > 0 ? 0.5 : 0, count * t.hoursEach[1]),
     ];
-    if (hours[1] > 0) tasks.push({ name: t.task(count), hours: hours.map(quarter) });
+    if (hours[1] > 0) tasks.push({ name: t.task(count), hours: hours.map(quarter), skill: t.skill });
     // All repairs dry at the same time, so the longest drying time is the wait.
     waitLo = Math.max(waitLo, t.wait[0]);
     waitHi = Math.max(waitHi, t.wait[1]);
@@ -232,6 +243,8 @@ export function planRepairs(items = []) {
     // Spackle and joint compound soak up paint differently, so patched spots need priming.
     needsSpotPrime: repairs.some((r) => REPAIR_TYPES[r.type].spotPrime),
     hardest: repairs.reduce((max, r) => Math.max(max, r.difficulty), 0),
+    // Skills these repairs need beyond painting, so the app can ask about experience with each.
+    skills: [...new Set([...counts.keys()].map((id) => REPAIR_TYPES[id].skill).filter(Boolean))],
     hasRepairs: repairs.length > 0,
   };
 }

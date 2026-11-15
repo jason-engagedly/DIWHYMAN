@@ -317,6 +317,30 @@ h4 { margin: 12px 0 4px; font-size: 0.92rem; }
 .advice-warn.block { border: 1px solid var(--warn); border-radius: 10px; padding: 10px 12px; margin: 12px 0; }
 .advice-warn.block ul { margin: 6px 0 0; padding-left: 18px; }
 
+/* ---------- Experience and difficulty ---------- */
+.experience { margin: 0 0 14px; }
+#step-experience .experience { margin: 0; }
+.exp-q { margin: 0 0 8px; }
+.exp-q small { margin-top: 2px; }
+.exp-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.exp-options button {
+  display: flex; flex-direction: column; gap: 2px; padding: 10px 8px; text-align: center;
+  background: var(--bg); color: var(--text); border: 1px solid var(--line); font-weight: 400;
+}
+.exp-options button strong { font-size: 0.88rem; }
+.exp-options button small { font-size: 0.75rem; }
+.exp-options button[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+#exp-drywall_patching .experience { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.difficulty { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0 0 8px; }
+.difficulty small { margin: 0; }
+.diff-pill { font-size: 0.8rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--accent); background: var(--accent-soft); }
+.diff-pill.d4, .diff-pill.d5 { border-color: var(--warn); color: var(--warn); background: none; }
+.tuned { font-size: 0.88rem; color: var(--muted); margin: 0 0 6px; }
+.link.inline { width: auto; display: inline; padding: 0; font-size: inherit; }
+@media (max-width: 420px) {
+  .exp-options button small { display: none; }
+}
+
 /* ---------- Pro ---------- */
 .pro-badge { font-size: 0.7rem; background: #c79a2b; color: #1f1a0e; padding: 2px 8px; border-radius: 999px; letter-spacing: 0.05em; }
 #pro-locked p { margin: 6px 0; }
