@@ -147,8 +147,14 @@ function describeError(err) {
     if (err.status === 401 || err.status === 403) {
       return { status: 502, message: `The AI service rejected the API key. Check ${service} in your .env file.` };
     }
+    // Out of credit is the app owner's billing problem, not the user's: say so in the server log only.
+    if (err.code === "insufficient_quota" || err.type === "insufficient_quota" || /credit balance/i.test(err.message)) {
+      const service = err instanceof Anthropic.APIError ? "Anthropic" : "OpenAI";
+      console.error(`[billing] The ${service} account is out of credit. Add credit in its billing settings.`);
+      return { status: 503, message: "This feature is unavailable right now. Please try again later." };
+    }
     if (err.status === 429) {
-      return { status: 503, message: "The AI service is busy or out of credit. Wait a minute and try again." };
+      return { status: 503, message: "The AI service is busy. Wait a minute and try again." };
     }
     if (err.status === 400) {
       return { status: 422, message: "The AI service couldn't use that photo. Try a different one." };
