@@ -6,6 +6,8 @@ Snap a photo of a room and get a paint plan:
 
 - **Measurements.** Length of each wall plus wall height, with a live square-footage total. Has a quick "length × width" option for rectangular rooms, and doors and windows are subtracted automatically.
 - **Color fan.** About 9,900 colors from Sherwin-Williams, Benjamin Moore and Behr, laid out like a paper fan deck by color family. You can also search by name or code (e.g. "Alabaster" or "SW 7008").
+- **Holes, cracks and gaps.** Add close-up photos (or a list by hand) and each spot gets the right fix: caulk for gaps along trim and corner cracks, spackle for nail holes, a mesh patch for medium holes, tape for wall cracks. Water damage and wide or diagonal cracks get a "have a pro look first" warning. Repairs flow into the materials, hours and costs.
+- **Sanding built in.** A light sand of all walls before the wipe-down, and a light sand between every coat.
 - **Primer and coats.** Based on the color change and the wall's condition (stains, patches, bare drywall, glossy paint…).
 - **Shopping list.** Paint and primer rounded up to whole gallons, with a note on how much will be left over.
 - **Time estimate.** Hours broken into gated phases (Prep → Coatings → Cleanup), each with its tasks, drying waits and a "ready when" checkpoint before the next phase. Also a total ("A weekend") and a pro-crew comparison.
@@ -65,6 +67,8 @@ Working speeds live in `shared/hours.js` (`HOUR_RATES`) and assume one first-tim
 
 - Rolling walls, including cutting in edges: 130–200 sq ft per hour per coat (ceilings 80–120)
 - Taping: 80–150 ft per hour, along the floor and ceiling lines plus around each door and window
+- Sanding: 300–500 sq ft per hour before painting, 350–600 between coats
+- Spot repairs: per-repair times and drying in `shared/repairs.js` (e.g. a nail hole is a few minutes, a medium patch 45–90 minutes plus 3–6 hours of drying)
 - Repairs, sanding and wallpaper stripping are added only when that wall condition is checked
 - Drying: 2–4 hrs between coats, 1–3 hrs for primer, 1–2 hrs for spackle
 - A 2-person pro crew does the hands-on work in roughly 25–35% of the DIY time
@@ -77,7 +81,9 @@ server.js               Web server and API endpoints
 shared/paintCalc.js     Paint math: area, primer, coats, gallons (used by browser and server)
 shared/costs.js         DIY and professional cost estimates (used by browser and server)
 shared/hours.js         Time estimate by phase: Prep, Coatings, Cleanup
+shared/repairs.js       Holes, cracks and gaps: fix, materials, time and pro price per repair
 lib/analyzePhoto.js     Sends the photo to Claude and gets structured room details back
+lib/analyzeImperfections.js  Sends close-ups of damage to Claude and gets a list of repairs back
 lib/previewColor.js     Asks the image model to repaint the walls
 lib/proAccess.js        Pro codes and the daily preview limit
 public/                 The phone-friendly page (HTML, CSS, JavaScript)

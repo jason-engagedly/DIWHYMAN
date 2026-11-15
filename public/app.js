@@ -2,6 +2,7 @@
 import { buildPaintPlan, paintableArea, CONDITIONS } from "/shared/paintCalc.js";
 import { estimateCosts, compareDiyVsPro, COST_DEFAULTS, money } from "/shared/costs.js";
 import { estimateHours, formatHours } from "/shared/hours.js";
+import { planRepairs, REPAIR_TYPES } from "/shared/repairs.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -18,6 +19,7 @@ const state = {
   bladeIndex: 0, // strip the user is looking at
   chosen: null, // { brandId, brand, code, name, hex }
   paintPriceEdited: false,
+  repairPhotos: [], // resized close-ups of holes, cracks and gaps
   costView: "dollars", // or "time"
   lastCosts: null,
   lastHours: null,
@@ -42,6 +44,7 @@ async function init() {
     // Server unreachable: keep defaults, errors will show when buttons are used.
   }
   if (!state.config.analysisAvailable) {
+    $("repair-photo-tools").hidden = true;
     $("analyze-status").textContent = "Photo analysis isn't set up on this server. Enter measurements yourself below.";
   }
 
@@ -111,6 +114,7 @@ $("manual-btn").addEventListener("click", () => {
 
 function showSteps() {
   $("step-room").hidden = false;
+  $("step-repairs").hidden = false;
   $("step-color").hidden = false;
   updateAll();
 }
@@ -177,7 +181,7 @@ $("include-ceiling").addEventListener("change", (e) => {
 });
 
 // Any change to the measurements, condition boxes or prices refreshes the totals.
-for (const id of ["step-room", "results"]) {
+for (const id of ["step-room", "step-repairs", "results"]) {
   $(id).addEventListener("input", (e) => {
     if (e.target.id === "paint-price") state.paintPriceEdited = true;
     updateAll();
@@ -213,7 +217,12 @@ function renderConditions() {
 }
 
 function readRoom() {
+  const repairPlan = planRepairs(readRepairs());
+  const conditions = [...document.querySelectorAll("#conditions input:checked")].map((b) => b.value);
+  // Spackled and patched spots need spot priming, just like the "patched spots" condition.
+  if (repairPlan.needsSpotPrime && !conditions.includes("patches")) conditions.push("patches");
   return {
+    repairPlan,
     wallWidthsFt: [...document.querySelectorAll("#walls input")].map((i) => Number(i.value) || 0),
     wallHeightFt: Number($("wall-height").value),
     doors: Number($("doors").value),
@@ -221,7 +230,7 @@ function readRoom() {
     includeCeiling: $("include-ceiling").checked,
     ceilingSqFt: Number($("ceiling-area").value),
     currentColorHex: $("current-color").value,
-    conditions: [...document.querySelectorAll("#conditions input:checked")].map((b) => b.value),
+    conditions,
   };
 }
 
@@ -241,7 +250,142 @@ function renderAreaTotal(room) {
     <div class="total-line grand"><span>Total to paint</span><span>${fmt(a.totalSqFt)} sq ft</span></div>`;
 }
 
-// ---------------------------------------------------------------- Step 3: color fan
+// ---------------------------------------------------------------- Step 3: holes, cracks and gaps
+
+const REPAIR_OPTIONS = Object.entries(REPAIR_TYPES)
+  .map(([id, t]) => `<option value="${id}">${escapeHtml(t.short)}</option>`)
+  .join("");
+
+function addRepairRow(type = "nail_holes", count = 1, note = "") {
+  const li = document.createElement("li");
+  li.innerHTML = `
+    <div class="repair-row">
+      <select aria-label="Kind of repair">${REPAIR_OPTIONS}</select>
+      <input type="number" inputmode="numeric" min="1" step="1" aria-label="How many" />
+      <button type="button" class="remove-wall" aria-label="Remove repair">✕</button>
+    </div>
+    ${note ? `<small class="repair-note">${escapeHtml(note)}</small>` : ""}`;
+  li.querySelector("select").value = type;
+  li.querySelector("input").value = count;
+  $("repairs").append(li);
+}
+
+function readRepairs() {
+  return [...$("repairs").children].map((li) => ({
+    type: li.querySelector("select").value,
+    count: Number(li.querySelector("input").value) || 0,
+  }));
+}
+
+$("add-repair").addEventListener("click", () => {
+  addRepairRow();
+  $("repairs").lastElementChild.querySelector("select").focus();
+  updateAll();
+});
+
+$("repairs").addEventListener("click", (e) => {
+  const btn = e.target.closest(".remove-wall");
+  if (!btn) return;
+  btn.closest("li").remove();
+  updateAll();
+});
+$("repairs").addEventListener("change", updateAll);
+
+function renderRepairAdvice(repairPlan) {
+  if (!repairPlan.hasRepairs) {
+    $("repair-advice").innerHTML = $("repairs").children.length
+      ? ""
+      : `<p class="muted small">No repairs added. If your walls are smooth, you can skip this step.</p>`;
+    return;
+  }
+  const items = repairPlan.repairs
+    .map(
+      (r) => `
+      <li class="${r.proRecommended ? "pro-first" : ""}">
+        <div class="advice-head">
+          <span class="fix-badge">${escapeHtml(r.fix)}</span>
+          <strong>${escapeHtml(r.label)}</strong>
+          <span class="muted small">× ${r.count}</span>
+        </div>
+        <p>${escapeHtml(r.method)}</p>
+        ${r.advice ? `<p class="advice-warn">⚠️ ${escapeHtml(r.advice)}</p>` : ""}
+        <small>Difficulty: ${difficultyLabel(r.difficulty)}</small>
+      </li>`,
+    )
+    .join("");
+  $("repair-advice").innerHTML = `<h3>How to fix them</h3><ul class="advice-list">${items}</ul>`;
+}
+
+function difficultyLabel(level) {
+  return ["", "Easy", "Easy to moderate", "Moderate", "Advanced", "Pro job"][level] || "";
+}
+
+function repairWarningsHtml(repairPlan) {
+  const serious = repairPlan?.warnings.filter((w) => w.proRecommended) || [];
+  if (!serious.length) return "";
+  return `<div class="advice-warn block"><strong>⚠️ Before you paint:</strong><ul>${serious
+    .map((w) => `<li>${escapeHtml(w.text)}</li>`)
+    .join("")}</ul></div>`;
+}
+
+$("repair-photos").addEventListener("change", async (e) => {
+  const files = [...(e.target.files || [])].slice(0, 4 - state.repairPhotos.length);
+  for (const file of files) {
+    try {
+      state.repairPhotos.push(await shrinkPhoto(file));
+    } catch {
+      setStatus("repairs-status", "One of the photos couldn't be opened. Try a JPEG or PNG.", true);
+    }
+  }
+  e.target.value = "";
+  renderRepairThumbs();
+});
+
+function renderRepairThumbs() {
+  $("repair-thumbs").innerHTML = state.repairPhotos
+    .map(
+      (blob, i) =>
+        `<span class="thumb"><img src="${URL.createObjectURL(blob)}" alt="Close-up ${i + 1}" />
+         <button type="button" data-remove="${i}" aria-label="Remove photo ${i + 1}">✕</button></span>`,
+    )
+    .join("");
+  $("check-repairs").disabled = !state.repairPhotos.length;
+}
+
+$("repair-thumbs").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-remove]");
+  if (!btn) return;
+  state.repairPhotos.splice(Number(btn.dataset.remove), 1);
+  renderRepairThumbs();
+});
+
+$("check-repairs").addEventListener("click", async () => {
+  if (!state.repairPhotos.length) return;
+  const form = new FormData();
+  state.repairPhotos.forEach((blob, i) => form.append("photos", blob, `closeup-${i + 1}.jpg`));
+  $("check-repairs").disabled = true;
+  setStatus("repairs-status", "Checking your photos… this takes about 10–30 seconds.");
+  try {
+    const result = await postForm("/api/imperfections", form);
+    if (!result.shows_wall_damage || !result.findings.length) {
+      setStatus("repairs-status", "We didn't spot any holes, cracks or gaps. Try a closer photo, or add repairs yourself below.", true);
+      return;
+    }
+    $("repairs").innerHTML = "";
+    for (const f of result.findings) {
+      const sure = f.confidence === "low" ? " · not sure, please check" : "";
+      addRepairRow(f.type, Math.max(1, f.count), `Seen ${f.where}${sure}`);
+    }
+    setStatus("repairs-status", `Found ${result.findings.length} kind${result.findings.length > 1 ? "s" : ""} of repair. Check the list and change anything that's off. ${result.notes}`.trim());
+    updateAll();
+  } catch (err) {
+    setStatus("repairs-status", err.message, true);
+  } finally {
+    $("check-repairs").disabled = !state.repairPhotos.length;
+  }
+});
+
+// ---------------------------------------------------------------- Step 4: color fan
 
 function renderBrandTabs() {
   $("brand-tabs").innerHTML = state.brands
@@ -477,6 +621,7 @@ function colorLabel(c) {
 function updateAll() {
   const room = readRoom();
   renderAreaTotal(room);
+  renderRepairAdvice(room.repairPlan);
   if (!state.chosen) return;
 
   let plan;
@@ -492,9 +637,10 @@ function updateAll() {
     primerPerGallon: $("primer-price").value,
     region: $("region").value,
     conditions: room.conditions,
+    repairPlan: room.repairPlan,
   });
   const wasHidden = $("results").hidden;
-  renderPlan(plan);
+  renderPlan(plan, room.repairPlan);
   const hours = estimateHours(plan, room);
   renderHours(hours);
   renderCosts(costs, hours);
@@ -503,7 +649,7 @@ function updateAll() {
 }
 $("region").addEventListener("change", updateAll);
 
-function renderPlan(p) {
+function renderPlan(p, repairPlan) {
   const primerLabel = { none: "None", spot: "Spot", full: "Full coat" }[p.primer];
   const shopping = [
     `<li><strong>Paint: ${p.paint.buy.label}</strong> of ${escapeHtml(colorLabel(state.chosen))}<br><small>${p.paint.buy.note}${
@@ -515,7 +661,11 @@ function renderPlan(p) {
       `<li><strong>Primer: ${p.primerAmount.buy.label}</strong> of ${escapeHtml(p.primerType)}<br><small>${p.primerAmount.buy.note}</small></li>`,
     );
   }
-  shopping.push("<li>Painter's tape, drop cloths, a 9\" roller with 3/8\" nap, a tray and a 2\" angled brush</li>");
+  if (repairPlan?.materials.length) {
+    const items = repairPlan.materials.map((m) => (m.qty > 1 ? `${m.label} × ${m.qty}` : m.label));
+    shopping.push(`<li><strong>Repair supplies:</strong> ${escapeHtml(items.join(", "))}</li>`);
+  }
+  shopping.push("<li>Painter's tape, drop cloths, fine-grit sanding sponges (180–220 grit), a 9\" roller with 3/8\" nap, a tray and a 2\" angled brush</li>");
 
   $("plan-body").innerHTML = `
     <div class="big-numbers">
@@ -526,7 +676,8 @@ function renderPlan(p) {
     <h3>🛒 Shopping list</h3>
     <ul class="shopping">${shopping.join("")}</ul>
     ${p.coats === 1 ? "<p class='hint'>The paint is sized for two coats, in case one doesn't cover evenly.</p>" : ""}
-    ${p.prepSteps.length ? `<h3>🧰 Prep first</h3><ol>${p.prepSteps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ol>` : ""}
+    ${repairWarningsHtml(repairPlan)}
+    ${p.prepSteps.length ? `<h3>🧰 Key steps</h3><ol>${p.prepSteps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ol>` : ""}
     <details><summary>Why this plan</summary>
       <ul class="reasons">${p.reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul>
       <ul class="assumptions">${p.assumptions.map((a) => `<li>${escapeHtml(a)}</li>`).join("")}</ul>

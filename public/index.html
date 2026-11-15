@@ -100,9 +100,31 @@
         </fieldset>
       </section>
 
-      <!-- Step 3: color fan -->
+      <!-- Step 4: color fan -->
+      <!-- Step 3: holes, cracks and gaps -->
+      <section class="card" id="step-repairs" hidden>
+        <h2><span class="num">3</span> Holes, cracks and gaps</h2>
+        <p class="hint">Fixing these before you paint makes the biggest difference to the finish. Add close-up photos and we'll tell you how to fix each one: caulk, spackle or a patch.</p>
+
+        <div id="repair-photo-tools">
+          <label class="photo-drop small-drop" for="repair-photos">
+            <span>📷 Add close-up photos (up to 4)</span>
+            <small>Put a coin next to small holes so we can judge the size.</small>
+          </label>
+          <input id="repair-photos" type="file" accept="image/*" multiple hidden />
+          <div class="thumbs" id="repair-thumbs"></div>
+          <button id="check-repairs" class="secondary" type="button" disabled>Check my photos</button>
+          <p class="status" id="repairs-status" role="status"></p>
+        </div>
+
+        <h3>Your repairs</h3>
+        <ul class="repairs" id="repairs"></ul>
+        <button id="add-repair" class="link" type="button">+ Add a repair yourself</button>
+        <div id="repair-advice" aria-live="polite"></div>
+      </section>
+
       <section class="card" id="step-color" hidden>
-        <h2><span class="num">3</span> Pick your new color</h2>
+        <h2><span class="num">4</span> Pick your new color</h2>
 
         <div class="brand-tabs" id="brand-tabs" role="tablist"></div>
         <input id="color-search" type="search" placeholder="Search by name or code, e.g. Alabaster or SW 7008" />

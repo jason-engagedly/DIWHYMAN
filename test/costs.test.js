@@ -15,13 +15,13 @@ const bedroom = {
 
 test("DIY materials: paint plus basic supplies", () => {
   const costs = estimateCosts(buildPaintPlan(bedroom), { brandId: "sherwin-williams" });
-  // 2 gallons x $80 + $45 supplies
-  assert.equal(costs.diy.total, 205);
+  // 2 gallons x $80 + $55 supplies
+  assert.equal(costs.diy.total, 215);
 });
 
 test("custom paint price overrides the brand default", () => {
   const costs = estimateCosts(buildPaintPlan(bedroom), { brandId: "behr", paintPerGallon: 30 });
-  assert.equal(costs.diy.total, 2 * 30 + 45);
+  assert.equal(costs.diy.total, 2 * 30 + 55);
 });
 
 test("pro estimate is a range above the DIY cost", () => {

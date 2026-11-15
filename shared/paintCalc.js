@@ -131,7 +131,6 @@ export function coatPlan({ currentColorHex, targetColorHex, conditions = [] }) {
     reasons.push("Stains bleed through regular paint. A stain-blocking primer seals them in.");
   }
   if (flags.has("glossy_finish")) {
-    prepSteps.push("Lightly sand the glossy paint (220-grit) and wipe off the dust.");
     primer = "full";
     primerType ??= "Bonding primer";
     reasons.push("New paint doesn't grip glossy paint well. Sanding plus a bonding primer stops peeling.");
@@ -166,6 +165,15 @@ export function coatPlan({ currentColorHex, targetColorHex, conditions = [] }) {
     coats = Math.max(coats, 3);
     reasons.push("Bright reds, oranges and yellows are thin and streaky. Plan on three coats.");
   }
+
+  // Sanding is standard on every job: before painting, and between coats.
+  prepSteps.push(
+    flags.has("glossy_finish")
+      ? "Scuff-sand all of the glossy paint (180–220 grit) so the new paint can grip."
+      : "Lightly sand all walls with a fine-grit sanding sponge (180–220 grit) to knock down bumps and help the paint grip.",
+  );
+  prepSteps.push("Wipe off the sanding dust with a damp cloth and let the walls dry.");
+  prepSteps.push("Between coats: once a coat is dry, give it a quick light sand (220 grit) and wipe off the dust.");
 
   return {
     primer,

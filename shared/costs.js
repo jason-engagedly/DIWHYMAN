@@ -13,8 +13,8 @@ export const COST_DEFAULTS = {
   },
   primerPerGallon: 35,
   supplies: {
-    basic: 45, // roller, covers, tray, angled brush, painter's tape, drop cloth
-    prep: 20, // spackle, putty knife, sanding sponge (only if the walls need repair)
+    basic: 55, // roller, covers, tray, angled brush, painter's tape, drop cloth, fine-grit sanding sponges
+    prep: 20, // spackle and putty knife (only if the walls need repair and no repair list was given)
     wallpaperRemoval: 30, // scorer, remover solution, scraper
   },
   pro: {
@@ -46,6 +46,7 @@ export const COST_DEFAULTS = {
  * @param {number} [options.primerPerGallon]
  * @param {"lower"|"average"|"higher"} [options.region]
  * @param {string[]} [options.conditions]    Wall conditions, same keys as the paint plan.
+ * @param {object} [options.repairPlan]      Result of planRepairs() in shared/repairs.js.
  */
 export function estimateCosts(plan, options = {}) {
   const d = COST_DEFAULTS;
@@ -54,6 +55,8 @@ export function estimateCosts(plan, options = {}) {
   const primerPrice = positive(options.primerPerGallon) ?? d.primerPerGallon;
   const region = d.regionFactor[options.region] ? options.region : "average";
   const conditions = new Set(options.conditions || []);
+  // A specific repair list (from photos or entered by hand) replaces the generic "patches" estimates.
+  const repairPlan = options.repairPlan?.hasRepairs ? options.repairPlan : null;
 
   // ---- Materials (what you'd spend doing it yourself)
   const lines = [];
@@ -66,9 +69,13 @@ export function estimateCosts(plan, options = {}) {
     const g = plan.primerAmount.buy.gallons;
     lines.push({ label: `Primer: ${g} gal × ${money(primerPrice)}`, amount: g * primerPrice });
   }
-  lines.push({ label: "Rollers, brush, tray, tape and drop cloth", amount: d.supplies.basic });
-  if (conditions.has("patches") || conditions.has("cracks_or_peeling") || conditions.has("glossy_finish")) {
-    lines.push({ label: "Spackle, putty knife and sandpaper", amount: d.supplies.prep });
+  lines.push({ label: "Rollers, brush, tray, tape, drop cloth and sanding sponges", amount: d.supplies.basic });
+  if (repairPlan) {
+    for (const m of repairPlan.materials) {
+      lines.push({ label: m.qty > 1 ? `${m.label} × ${m.qty}` : m.label, amount: m.amount });
+    }
+  } else if (conditions.has("patches") || conditions.has("cracks_or_peeling")) {
+    lines.push({ label: "Spackle and putty knife", amount: d.supplies.prep });
   }
   if (conditions.has("wallpaper")) {
     lines.push({ label: "Wallpaper removal supplies", amount: d.supplies.wallpaperRemoval });
@@ -89,6 +96,8 @@ export function estimateCosts(plan, options = {}) {
   }
   const prep = [0, 0];
   for (const c of conditions) {
+    // With a repair list, repairs are priced one by one below instead of by wall area.
+    if (repairPlan && c === "patches") continue;
     const rate = d.pro.prepPerSqFt[c];
     if (rate) {
       prep[0] += rate[0] * wallSqFt;
@@ -96,6 +105,9 @@ export function estimateCosts(plan, options = {}) {
     }
   }
   if (prep[1] > 0) laborParts.push({ label: "Prep and repairs", range: prep });
+  if (repairPlan && repairPlan.proLabor[1] > 0) {
+    laborParts.push({ label: "Spot repairs", range: [...repairPlan.proLabor] });
+  }
 
   const factor = d.regionFactor[region];
   for (const part of laborParts) part.range = part.range.map((v) => v * factor);

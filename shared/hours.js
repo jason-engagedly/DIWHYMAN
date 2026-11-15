@@ -13,6 +13,8 @@ export const HOUR_RATES = {
   tapeFtPerHour: [150, 80],
   removeTapeFtPerHour: [400, 200],
   sandGlossSqFtPerHour: [250, 150],
+  lightSandSqFtPerHour: [500, 300], // fine-grit sanding sponge or pole sander, before painting
+  sandBetweenCoatsSqFtPerHour: [600, 350], // quick 220-grit pass once a coat is dry
   stripWallpaperSqFtPerHour: [60, 30],
   // Drying waits, in hours.
   recoatWait: [2, 4], // latex paint between coats
@@ -24,7 +26,8 @@ export const HOUR_RATES = {
 
 /**
  * @param {object} plan  Result of buildPaintPlan().
- * @param {object} room  The same input given to buildPaintPlan (doors, windows, conditions).
+ * @param {object} room  The same input given to buildPaintPlan (doors, windows, conditions),
+ *                      plus optional repairPlan from planRepairs() in shared/repairs.js.
  */
 export function estimateHours(plan, room = {}) {
   const r = HOUR_RATES;
@@ -37,24 +40,34 @@ export function estimateHours(plan, room = {}) {
   const tapeFt = totalWallWidthFt * 2 + doors * 17 + windows * 16;
 
   // ---------------- Prep
+  // Order matters: repairs first, let them dry, sand everything (including the repairs) smooth,
+  // wipe off the dust, then tape.
+  const repairPlan = room.repairPlan?.hasRepairs ? room.repairPlan : null;
   const prep = [];
   prep.push(task("Move furniture and cover the floor", [0.5, 1]));
-  prep.push(task("Wipe down the walls", perRate(wallSqFt, r.cleanWallsSqFtPerHour)));
   if (conditions.has("wallpaper")) {
     prep.push(task("Strip wallpaper and wash off the glue", perRate(wallSqFt, r.stripWallpaperSqFtPerHour)));
   }
   if (conditions.has("cracks_or_peeling")) prep.push(task("Scrape loose paint and fill cracks", [1, 3]));
-  if (conditions.has("patches")) prep.push(task("Fill holes and sand patches smooth", [0.5, 1.5]));
-  if (conditions.has("glossy_finish")) {
-    prep.push(task("Scuff-sand glossy paint and wipe off dust", perRate(wallSqFt, r.sandGlossSqFtPerHour)));
+  if (repairPlan) {
+    for (const t of repairPlan.tasks) prep.push(task(t.name, t.hours));
+  } else if (conditions.has("patches")) {
+    prep.push(task("Fill holes and sand patches smooth", [0.5, 1.5]));
   }
   if (conditions.has("stains")) prep.push(task("Wash stained areas", [0.25, 0.5]));
+  // Always sand before painting: it knocks down bumps and old drips and helps new paint grip.
+  if (conditions.has("glossy_finish")) {
+    prep.push(task("Scuff-sand glossy paint all over (180–220 grit)", perRate(wallSqFt, r.sandGlossSqFtPerHour)));
+  } else {
+    prep.push(task("Light sand all walls (180–220 grit)", perRate(wallSqFt, r.lightSandSqFtPerHour)));
+  }
+  prep.push(task("Wipe off sanding dust with a damp cloth", perRate(wallSqFt, r.cleanWallsSqFtPerHour)));
   prep.push(task("Tape edges, outlets and trim", perRate(tapeFt, r.tapeFtPerHour)));
 
-  const prepWaits = [];
-  if (conditions.has("patches") || conditions.has("cracks_or_peeling")) {
-    prepWaits.push(task("Spackle dries before sanding", r.spackleWait));
-  }
+  // Repairs and scraped spots all dry at the same time, so there's one drying wait.
+  const prepWaits = (repairPlan?.waits || []).map((w) => task(w.name, w.hours));
+  const fillsSpackle = conditions.has("cracks_or_peeling") || (!repairPlan && conditions.has("patches"));
+  if (!prepWaits.length && fillsSpackle) prepWaits.push(task("Spackle dries before sanding", r.spackleWait));
 
   // ---------------- Coatings
   const coatings = [];
@@ -66,13 +79,21 @@ export function estimateHours(plan, room = {}) {
     coatings.push(task("Spot-prime patched areas", [0.25, 0.75]));
     coatingWaits.push(task("Primer dries", r.primerWait));
   }
+  // A quick light sand once each coat (and full primer) is dry gives a smoother finish.
+  const sandBetween = perRate(wallSqFt, r.sandBetweenCoatsSqFtPerHour);
+  if (plan.primer === "full") {
+    coatings.push(task("Light sand primer (220 grit) and wipe off dust", sandBetween));
+  }
   for (let coat = 1; coat <= plan.coats; coat++) {
     const label = plan.coats === 1 ? "Paint" : `Coat ${coat}`;
     if (ceilingSqFt > 0) {
       coatings.push(task(`${label}: ceiling`, perRate(ceilingSqFt, r.ceilingSqFtPerHourPerCoat)));
     }
     coatings.push(task(`${label}: cut in edges and roll walls`, perRate(wallSqFt, r.wallSqFtPerHourPerCoat)));
-    if (coat < plan.coats) coatingWaits.push(task(`Coat ${coat} dries before recoating`, r.recoatWait));
+    if (coat < plan.coats) {
+      coatingWaits.push(task(`Coat ${coat} dries before recoating`, r.recoatWait));
+      coatings.push(task(`Light sand coat ${coat} (220 grit) and wipe off dust`, sandBetween));
+    }
   }
 
   // ---------------- Cleanup
@@ -89,14 +110,14 @@ export function estimateHours(plan, room = {}) {
       name: "Prep",
       tasks: prep,
       waits: prepWaits,
-      gate: "Walls are clean and dry, repairs are smooth, and every edge is taped.",
+      gate: "Repairs are dry and flush, walls are lightly sanded and wiped clean, and every edge is taped.",
     },
     {
       id: "coatings",
       name: "Coatings",
       tasks: coatings,
       waits: coatingWaits,
-      gate: "Color looks even from every angle, with no thin spots or roller marks, and the last coat is dry to the touch.",
+      gate: "Each coat was lightly sanded once dry, the color looks even from every angle with no thin spots or roller marks, and the last coat is dry to the touch.",
     },
     {
       id: "cleanup",

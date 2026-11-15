@@ -5,10 +5,12 @@ import OpenAI from "openai";
 import express from "express";
 import multer from "multer";
 import { analyzeRoomPhoto } from "./lib/analyzePhoto.js";
+import { analyzeImperfections } from "./lib/analyzeImperfections.js";
 import { previewWallColor } from "./lib/previewColor.js";
 import { buildPaintPlan } from "./shared/paintCalc.js";
 import { estimateCosts } from "./shared/costs.js";
 import { estimateHours } from "./shared/hours.js";
+import { planRepairs } from "./shared/repairs.js";
 import { isPro, usePreview, refundPreview, PRO_DAILY_LIMIT } from "./lib/proAccess.js";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -56,11 +58,29 @@ app.post("/api/analyze", upload.single("photo"), async (req, res, next) => {
   }
 });
 
+// 1b. Close-ups of holes, cracks and gaps in, list of repairs out.
+app.post("/api/imperfections", upload.array("photos", 4), async (req, res, next) => {
+  try {
+    if (!req.files?.length) return res.status(400).json({ error: "No photos were uploaded." });
+    res.json(await analyzeImperfections(req.files));
+  } catch (err) {
+    next(err);
+  }
+});
+
 // 2. Room numbers + colors in, paint plan, time and cost estimates out. Pure math, no AI.
 app.post("/api/plan", (req, res) => {
   try {
-    const plan = buildPaintPlan(req.body);
-    res.json({ ...plan, hours: estimateHours(plan, req.body), costs: estimateCosts(plan, req.body) });
+    const repairPlan = planRepairs(req.body.repairs);
+    const room = { ...req.body, repairPlan };
+    if (repairPlan.needsSpotPrime) room.conditions = [...new Set([...(room.conditions || []), "patches"])];
+    const plan = buildPaintPlan(room);
+    res.json({
+      ...plan,
+      repairs: repairPlan,
+      hours: estimateHours(plan, room),
+      costs: estimateCosts(plan, { ...room }),
+    });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -113,9 +133,13 @@ app.use((err, _req, res, _next) => {
 
 function describeError(err) {
   if (err instanceof multer.MulterError) {
-    return err.code === "LIMIT_FILE_SIZE"
-      ? { status: 413, message: "That photo is too big. Please use one under 10 MB." }
-      : { status: 400, message: "The photo upload didn't work. Please try again." };
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return { status: 413, message: "That photo is too big. Please use one under 10 MB." };
+    }
+    if (err.code === "LIMIT_UNEXPECTED_FILE") {
+      return { status: 400, message: "Upload up to 4 photos at a time." };
+    }
+    return { status: 400, message: "The photo upload didn't work. Please try again." };
   }
   // Errors from the Claude or OpenAI services.
   if (err instanceof Anthropic.APIError || err instanceof OpenAI.APIError) {

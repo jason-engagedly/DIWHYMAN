@@ -29,10 +29,11 @@ test("splits the job into Prep, Coatings and Cleanup, each with a gate", () => {
 
 test("a simple bedroom repaint fits in a long day", () => {
   const h = hoursFor(bedroom);
-  // 333 sq ft per coat at 130-200 sq ft/hr is 1¾-2½ hrs; two coats is 3½-5 hrs.
+  // 333 sq ft per coat at 130-200 sq ft/hr is 1¾-2½ hrs; two coats is 3½-5 hrs,
+  // plus ½-1 hr for a light sand between coats.
   const coatings = h.phases.find((p) => p.id === "coatings");
-  assert.deepEqual(coatings.hours, [3.5, 5]);
-  assert.equal(coatings.tasks.length, 2);
+  assert.deepEqual(coatings.hours, [4, 6]);
+  assert.equal(coatings.tasks.length, 3);
   assert.deepEqual(coatings.waitHours, [2, 4]); // one wait between the two coats
   assert.equal(h.schedule, "One long day, or a relaxed weekend");
 });
@@ -77,4 +78,29 @@ test("formats hours as whole hours", () => {
   assert.equal(formatHours([10.25, 17.75]), "10–18 hrs");
   assert.equal(formatHours(1.5), "2 hrs");
   assert.equal(formatHours([0, 0]), "0 hrs");
+});
+
+test("always sands before painting and between coats", () => {
+  const h = hoursFor(bedroom);
+  const [prep, coatings] = h.phases;
+  const names = prep.tasks.map((t) => t.name);
+  const sand = names.findIndex((n) => /Light sand all walls/.test(n));
+  const wipe = names.findIndex((n) => /Wipe off sanding dust/.test(n));
+  const tape = names.findIndex((n) => /^Tape/.test(n));
+  assert.ok(sand >= 0 && sand < wipe && wipe < tape, "sand, then wipe, then tape");
+  assert.ok(coatings.tasks.some((t) => /Light sand coat 1/.test(t.name)));
+  // No sanding after the final coat.
+  assert.ok(!coatings.tasks.some((t) => /Light sand coat 2/.test(t.name)));
+});
+
+test("glossy walls get a full scuff-sand instead of a light sand", () => {
+  const prep = hoursFor({ ...bedroom, conditions: ["glossy_finish"] }).phases[0];
+  assert.ok(prep.tasks.some((t) => /Scuff-sand/.test(t.name)));
+  assert.ok(!prep.tasks.some((t) => /Light sand all walls/.test(t.name)));
+});
+
+test("full primer gets a light sand before the first coat", () => {
+  const dark = { ...bedroom, currentColorHex: "#22344d", targetColorHex: "#f4f3ee" };
+  const coatings = hoursFor(dark).phases.find((p) => p.id === "coatings");
+  assert.ok(coatings.tasks.some((t) => /Light sand primer/.test(t.name)));
 });

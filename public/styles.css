@@ -294,6 +294,29 @@ h4 { margin: 12px 0 4px; font-size: 0.92rem; }
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
 .cost-toggle { margin: 4px 0 2px; }
 
+/* ---------- Holes, cracks and gaps ---------- */
+.small-drop { min-height: 0; padding: 14px; text-align: center; display: grid; gap: 2px; }
+.small-drop span { color: var(--text); font-weight: 600; }
+.thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+.thumb { position: relative; width: 72px; height: 72px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb button { position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; padding: 0; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.75rem; }
+.repairs { list-style: none; padding: 0; margin: 6px 0 0; }
+.repairs li { margin: 6px 0; }
+.repair-row { display: grid; grid-template-columns: minmax(0, 1fr) 72px 40px; gap: 8px; align-items: center; }
+.repair-row select, .repair-row input { margin-top: 0; }
+.repair-note { margin: 2px 0 0 2px; }
+.advice-list { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 8px; }
+.advice-list li { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.advice-list li.pro-first { border-color: var(--warn); }
+.advice-list p { margin: 6px 0; font-size: 0.92rem; }
+.advice-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.fix-badge { font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); border: 1px solid var(--accent); }
+.pro-first .fix-badge { border-color: var(--warn); color: var(--warn); background: none; }
+.advice-warn { color: var(--warn); font-weight: 500; }
+.advice-warn.block { border: 1px solid var(--warn); border-radius: 10px; padding: 10px 12px; margin: 12px 0; }
+.advice-warn.block ul { margin: 6px 0 0; padding-left: 18px; }
+
 /* ---------- Pro ---------- */
 .pro-badge { font-size: 0.7rem; background: #c79a2b; color: #1f1a0e; padding: 2px 8px; border-radius: 999px; letter-spacing: 0.05em; }
 #pro-locked p { margin: 6px 0; }

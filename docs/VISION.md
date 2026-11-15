@@ -1,6 +1,6 @@
 # DIWHYMAN: Product Vision and Build Plan
 
-_Living document. Last updated: 2026-11-14._
+_Living document. Last updated: 2026-11-15._
 
 This document explains what DIWHYMAN is, where it stands today, how it can make money, and what gets built next. It's written for anyone joining the project, whether building it or backing it. It's updated as the product changes; see the [change log](#change-log) at the end.
 
@@ -59,6 +59,9 @@ Painting is the first job type, chosen because it's common, low-risk and easy to
 | Color catalog: ~9,900 Sherwin-Williams, Benjamin Moore and Behr colors in a "fan deck" | Done (Benjamin Moore data has gaps) |
 | Primer and coats recommendation based on color change and wall condition | Done |
 | Shopping list in whole gallons, with leftover note | Done |
+| Holes, cracks and gaps: close-up photo check (AI) or a hand-entered list. Each repair gets the right fix (caulk, spackle, mesh patch, tape, new drywall), a difficulty rating, materials, time and pro price | Done; photo check not yet tested with a live API key |
+| Safety flags: water damage and wide or diagonal cracks get "have a pro look first" | Done |
+| Sanding as a standard step: light sand before the wipe-down, and between every coat | Done |
 | Time estimate in phases (Prep → Coatings → Cleanup) with checkpoints | Done |
 | Cost estimate: DIY materials vs. pro labor + materials, with Dollars / Time toggle | Done |
 | AI preview of the room in the new color | Built, Pro-only, not yet tested live |
@@ -69,7 +72,7 @@ Painting is the first job type, chosen because it's common, low-risk and easy to
 
 - Neutral wording throughout the cost comparison
 - "Why pros cost more" breakdown
-- Difficulty rating
+- Difficulty rating for the whole job (each repair is already rated)
 - Step-by-step guide with photos and video links
 - Shopping list with product links (affiliate)
 - "Get quotes from local painters" option
@@ -96,7 +99,7 @@ Adding a new job then means writing a new job type, not rebuilding the app.
 
 Picked for being common, low-risk, and easy to diagnose from a photo:
 
-1. Drywall patching (holes, cracks): pairs naturally with painting
+1. Drywall patching (holes, cracks): basic patching and caulking is already built into painting prep, so this would expand it into a standalone job
 2. Caulking (tubs, sinks, windows)
 3. Leaky faucet (cartridge or washer replacement)
 4. Running toilet (flapper or fill valve)
@@ -194,3 +197,4 @@ These numbers decide whether the business works, and none have been measured yet
 | Date | Change |
 |---|---|
 | 2026-11-14 | First version: vision, current painting prototype, revenue streams, build path, risks. |
+| 2026-11-15 | Added holes, cracks and gaps (photo check, fix advice, safety flags) and standard sanding steps to painting. |
