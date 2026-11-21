@@ -882,7 +882,7 @@ $("preview-btn").addEventListener("click", async () => {
     const { image } = await postForm("/api/preview", form, { "x-pro-code": state.proCode });
     $("before-img").src = state.photoUrl;
     $("after-img").src = image;
-    $("after-caption").textContent = state.chosen.name;
+    $("after-caption").textContent = `Finished: repaired and painted in ${state.chosen.name}`;
     $("preview-result").hidden = false;
     setStatus("preview-status", "");
   } catch (err) {

@@ -14,7 +14,7 @@ Snap a photo of a room and get a paint plan:
 - **Shopping list.** Paint and primer rounded up to whole gallons, with a note on how much will be left over.
 - **Time estimate.** Hours broken into gated phases (Prep → Coatings → Cleanup), each with its tasks, drying waits and a "ready when" checkpoint before the next phase. Also a total ("A weekend") and a pro-crew comparison.
 - **Cost estimate.** Do-it-yourself materials vs. hiring a pro (labor + materials), with prices and region you can adjust.
-- **Color preview (Pro).** An AI-generated picture of your room in the new color. Each image costs money, so it's locked behind Pro.
+- **Finished-room preview (Pro).** An AI-generated picture of your room finished: holes, cracks and gaps repaired, and the walls repainted in the new color. Each image costs money, so it's locked behind Pro.
 
 ## How it works
 
