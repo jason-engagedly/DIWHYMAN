@@ -1,6 +1,6 @@
 # DIWHYMAN: Product Vision and Build Plan
 
-_Living document. Last updated: 2026-11-15._
+_Living document. Last updated: 2026-11-21._
 
 This document explains what DIWHYMAN is, where it stands today, how it can make money, and what gets built next. It's written for anyone joining the project, whether building it or backing it. It's updated as the product changes; see the [change log](#change-log) at the end.
 
@@ -74,6 +74,8 @@ Painting is the first job type, chosen because it's common, low-risk and easy to
 
 - Neutral wording throughout the cost comparison
 - "Why pros cost more" breakdown
+- Edge choices: cut in freehand vs. tape, per type of edge, with defaults based on the user's painting experience
+- "Watch how" video slots on individual steps (see "Learning and videos" in section 5)
 - Step-by-step guide with photos and video links
 - Shopping list with product links (affiliate)
 - "Get quotes from local painters" option
@@ -128,6 +130,20 @@ Picked for being common, low-risk, and easy to diagnose from a photo:
 4. Running toilet (flapper or fill valve)
 5. Replacing a light fixture or switch (with clear limits on electrical work)
 
+### Learning and videos
+
+Videos are placed where people need them, not in a wall of links:
+
+- **"Watch how" chips** on specific steps in the Prep → Coatings → Cleanup checklist (e.g. "Cut in edges", "Pull tape while slightly tacky", "Patch a medium hole"). A tap opens a panel with the video, three key points in text, and the tools shown (where affiliate links fit naturally). Nothing autoplays.
+- **Side-by-side method comparisons** where there's more than one good way, starting with cutting in freehand vs. taping: time, cost, look, risks and who each suits, with a video for each.
+- **A "Learn" library** later, grouping every video by job and phase.
+
+Where the videos come from, in order:
+
+1. Curated public videos from established DIY and pro-painter channels, credited to the creator and started at the relevant moment.
+2. Partnerships with a few creators: they get traffic, the app gets consistent quality, and the tools shown can share affiliate links.
+3. DIWHYMAN's own short, consistent clips, one per step.
+
 ## 6. How it makes money
 
 DIWHYMAN earns on both paths a user can take, which is what lets it stay neutral.
@@ -136,7 +152,7 @@ DIWHYMAN earns on both paths a user can take, which is what lets it stay neutral
 |---|---|---|---|
 | **Material affiliate links** | Users who choose DIY buy materials and tools through links (Amazon, home improvement retailers). DIWHYMAN earns a commission on each sale. | First | Commission is a percentage of the order. Each program has its own rules on disclosure and on showing prices, so read them before building. |
 | **Pro referrals** | Users who choose a pro request quotes through the app. DIWHYMAN earns per lead or per booked job from a contractor marketplace partner (e.g. Angi, Thumbtack) or, later, directly from local pros. | First | Partner programs avoid building a contractor network up front. A direct local-pro network can come later. |
-| **Pro subscription** | Paid features: AI preview of the user's own room in a new color, saved projects, multi-room planning, ad-free guides. | Second | Already gated in the prototype with access codes. Needs accounts and payments (e.g. Stripe). |
+| **Pro subscription** | Paid features: AI preview of the user's own room finished (repaired and repainted in the new color), saved projects, multi-room planning, ad-free guides. | Second | Already gated in the prototype with access codes. Needs accounts and payments (e.g. Stripe). |
 | **Sponsored content and partnerships** | Paint and tool brands sponsor guides or featured products, clearly labeled. | Later | Must never affect the DIY-vs-pro advice. |
 | **Pro tools** | A version for handymen and small contractors: quick job estimates and customer-facing quotes. | Later | Reuses the same estimate engine. |
 
@@ -160,12 +176,13 @@ These numbers decide whether the business works, and none have been measured yet
 
 ### Phase 1: Finish painting (now)
 
+- First live test of the photo checks (room photo and holes/cracks) with an Anthropic API key. The AI preview has already passed its live tests.
+- Edge choices (cut in vs. tape) with experience-based defaults, plus the first "Watch how" video slots
 - Neutral wording in the cost comparison, plus a "why pros cost more" breakdown
-- Difficulty rating
 - Step-by-step guide for each phase, with video links
 - Shopping list with product links (placeholders until affiliate accounts are approved)
 - "Get quotes from local painters" button
-- First live test of photo analysis with a real API key (the AI preview passed its live test)
+- Small open items: see "Open questions" in section 10
 
 ### Phase 2: Ready for real users
 
@@ -213,6 +230,30 @@ These numbers decide whether the business works, and none have been measured yet
 - **Return rate:** users who start a second project
 - **Estimate accuracy:** users' actual time and cost vs. the app's estimate (an optional follow-up after a job)
 
+## 10. Product decisions so far
+
+Decisions made while building the painting prototype, so they aren't reopened by accident:
+
+| Decision | Why |
+|---|---|
+| Experience is asked **per task** (painting, drywall patching, and later each plumbing or electrical job), with three levels: New to this, Some experience, Confident | Skill doesn't carry across trades. Each task's hands-on hours narrow to match its answer; drying time, pro time and safety warnings never change. |
+| Time estimates are **shown in whole hours** ("1–3 hrs", "Under 1 hr"), with a note that experience moves you within the range | Fractions looked messy. The math underneath stays exact. |
+| Paint and primer are **rounded up to whole gallons**, with a note on how much will be left over | Paint is almost always bought by the gallon. |
+| Costs use a **Dollars / Time toggle**: DIY materials vs. pro price, or your hours vs. the pro crew's hours | One measure at a time is easier to read. The time view shows roughly how much money each hour of DIY work saves. |
+| **Sanding is standard:** a light sand before the wipe-down, and between every coat | Pro practice for a better finish. |
+| Repairs pick the **right fix per problem**: caulk for gaps along trim and corner cracks, spackle for nail holes, mesh patch for medium holes, tape for wall cracks, new drywall for large holes | Each needs different materials and time. |
+| **Water damage and wide or diagonal cracks** always get "have a pro look first" | Safety principle: they can mean a leak or the house moving. |
+| The AI preview is **one image of the finished room**: damage repaired, then painted | It shows what following the plan achieves. One image keeps the cost down. |
+| The AI preview is **Pro-only**, with a daily limit per user, and the server checks access before any paid call | Image generation costs money per image. |
+| Most painters **cut in freehand** and tape only where it's worth it; the app should recommend per edge rather than tape everything | Matches real practice. Not built yet. |
+
+### Open questions
+
+- Spot-priming a few patches currently shows "1 gallon of primer." Allow quarts just for spot primer?
+- Add a short note under the finished-room preview when the repairs include water damage or wide cracks, so the clean picture doesn't hide that a pro should look first?
+- The DIY-vs-pro wording still leans DIY in places ("Doing it yourself saves…"). Rework it to the neutral form in principle 1.
+- Check the difficulty ratings and time rates with working tradespeople.
+
 ---
 
 ## Change log
@@ -224,3 +265,4 @@ These numbers decide whether the business works, and none have been measured yet
 | 2026-11-15 | Added the task catalog with difficulty ratings, and experience asked per task with times tuned to each answer. |
 | 2026-11-15 | OpenAI connected; the AI room preview passed its first live test. |
 | 2026-11-21 | The AI preview now shows the finished room (holes, cracks and gaps repaired, then painted), tested on a realistic AI-generated room with damage. |
+| 2026-11-21 | Added "Product decisions so far" and "Open questions" (section 10), the learning and videos plan, and the updated Phase 1 list. Demo source and test photos moved into the repository. |

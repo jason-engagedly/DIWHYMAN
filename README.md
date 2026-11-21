@@ -92,6 +92,9 @@ lib/proAccess.js        Pro codes and the daily preview limit
 public/                 The phone-friendly page (HTML, CSS, JavaScript)
 public/colors/          Paint color catalog, one file per brand
 scripts/build-colors.mjs  Rebuilds the color catalog
+scripts/build-demo.mjs    Builds the standalone interactive demo from demo/template.html
+demo/                   Source of the interactive 10 × 10 bedroom demo
+test/fixtures/          Test photos (a damaged bedroom, and its AI finished-room preview)
 test/                   Automated tests
 ```
 

@@ -1,0 +1,1042 @@
+<meta charset="utf-8">
+<title>DIWHYMAN Bedroom Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Layout: two columns on wide screens. A sticky room "photo" with headline numbers on the left,
+     the planner steps on the right. Stacks to one column on phones.
+     Palette and type follow the DIWHYMAN app's own styles. */
+  :root {
+    --bg: #f6f4ef;
+    --card: #ffffff;
+    --text: #1f2421;
+    --muted: #5f6b64;
+    --line: #dedad0;
+    --accent: #2f6b4f;
+    --accent-text: #ffffff;
+    --accent-soft: #e4efe8;
+    --gold: #c79a2b;
+    --gold-text: #1f1a0e;
+    --error: #a22a2a;
+    --warn: #8a5a00;
+    --radius: 14px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141715; --card: #1d221f; --text: #ecefe9; --muted: #a3ada6; --line: #333b36;
+      --accent: #6fbf95; --accent-text: #0f1a14; --accent-soft: #23332a; --gold: #e0b450; --gold-text: #1f1a0e;
+      --error: #f08080; --warn: #e6b04a; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141715; --card: #1d221f; --text: #ecefe9; --muted: #a3ada6; --line: #333b36;
+    --accent: #6fbf95; --accent-text: #0f1a14; --accent-soft: #23332a; --gold: #e0b450; --gold-text: #1f1a0e;
+    --error: #f08080; --warn: #e6b04a; color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 var(--font);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 20px 40px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+
+  .top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 16px; margin-bottom: 16px; }
+  .top h1 { margin: 0; font-size: 1.6rem; text-wrap: balance; }
+  .top h1 span { color: var(--accent); }
+  .top p { margin: 2px 0 0; color: var(--muted); max-width: 60ch; }
+  .demo-pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+    background: var(--accent-soft); border: 1px solid var(--line); font-size: 0.82rem; font-weight: 600;
+  }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 20px; align-items: start; }
+  .stage { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); display: grid; gap: 12px; }
+  .steps { display: grid; gap: 16px; min-width: 0; }
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: minmax(0, 1fr); }
+    .stage { position: static; }
+  }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; min-width: 0; }
+  h2 { font-size: 1.12rem; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; text-wrap: balance; }
+  h3 { font-size: 1rem; margin: 18px 0 6px; }
+  h4 { margin: 12px 0 4px; font-size: 0.92rem; }
+  .num {
+    display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-text); font-size: 0.85rem; flex: none;
+  }
+  .hint, .muted, small { color: var(--muted); }
+  small { display: block; font-size: 0.8rem; }
+  .small { font-size: 0.85rem; }
+
+  /* ---------- Room illustration ---------- */
+  .room-card { padding: 0; overflow: hidden; }
+  .room-card svg { display: block; width: 100%; height: auto; }
+  .room-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--line); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; background: var(--bg); }
+  .seg button {
+    font: inherit; font-size: 0.82rem; font-weight: 600; border: 0; border-radius: 999px; padding: 6px 12px;
+    background: none; color: var(--text); cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
+  .room-caption { font-size: 0.8rem; color: var(--muted); }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; text-align: center; }
+  .kpi strong { display: block; font-size: 1.25rem; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .kpi span { font-size: 0.75rem; color: var(--muted); }
+  @media (max-width: 420px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+  .chosen { display: flex; gap: 12px; align-items: center; }
+  .chosen > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+  .chosen strong { font-size: 1.05rem; }
+
+  /* ---------- Forms ---------- */
+  label { display: block; margin: 10px 0; font-weight: 500; }
+  input[type="number"], input[type="text"], input[type="search"], select {
+    display: block; width: 100%; margin-top: 4px; padding: 10px 12px; font: inherit; color: var(--text);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+  }
+  input[type="color"] { width: 52px; height: 44px; padding: 2px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); flex: none; }
+  input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 0 10px; }
+  .grid3 label { font-size: 0.85rem; }
+  .color-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+  .check, #conditions label { display: flex; align-items: center; gap: 10px; font-weight: 400; margin: 8px 0; }
+  .check input, #conditions input { width: 20px; height: 20px; accent-color: var(--accent); }
+  fieldset { border: none; padding: 0; margin: 12px 0 0; }
+  legend { font-weight: 500; padding: 0; }
+
+  button { font: inherit; font-weight: 600; border-radius: 10px; padding: 12px 16px; cursor: pointer; border: 1px solid transparent; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .secondary { background: var(--accent-soft); color: var(--text); border-color: var(--line); }
+  .link { background: none; color: var(--accent); padding: 8px 0; font-weight: 500; }
+
+  /* ---------- Simulated photo analysis ---------- */
+  .analysis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; margin: 10px 0 0; padding: 12px; background: var(--accent-soft); border-radius: 10px; font-size: 0.9rem; }
+  .analysis div { display: flex; justify-content: space-between; gap: 8px; }
+  .analysis dt { color: var(--muted); }
+  .analysis dd { margin: 0; font-weight: 600; text-align: right; }
+  @media (max-width: 420px) { .analysis { grid-template-columns: 1fr; } }
+
+  /* ---------- Measurements ---------- */
+  .walls-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; }
+  .walls-head .height { margin: 0; width: 130px; font-size: 0.9rem; }
+  .walls { list-style: none; padding: 0; margin: 8px 0 0; }
+  .walls li { display: grid; grid-template-columns: 64px 1fr 40px; gap: 8px; align-items: center; margin: 6px 0; }
+  .walls input { margin-top: 0; }
+  .wall-label { color: var(--muted); font-size: 0.9rem; }
+  .remove-wall { width: 40px; height: 40px; padding: 0; background: none; border: 1px solid var(--line); color: var(--muted); }
+  .total-box { background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; margin: 12px 0; font-variant-numeric: tabular-nums; }
+  .total-line { display: flex; justify-content: space-between; gap: 8px; font-size: 0.92rem; }
+  .total-line.grand { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; font-weight: 700; font-size: 1.05rem; }
+
+  /* ---------- Color fan ---------- */
+  .brand-tabs { display: flex; gap: 6px; margin: 4px 0 10px; }
+  .brand-tabs button { flex: 1 1 0; min-width: 0; padding: 8px 4px; font-size: 0.8rem; line-height: 1.2; background: var(--bg); color: var(--text); border: 1px solid var(--line); }
+  .brand-tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .families { display: flex; gap: 6px; overflow-x: auto; padding: 8px 0 4px; scrollbar-width: thin; }
+  .family { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 0.82rem; font-weight: 500; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 999px; }
+  .family span { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.15); }
+  .family[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .fan { position: relative; height: 240px; margin: 12px auto 0; max-width: 340px; overflow: hidden; touch-action: pan-y; }
+  .blade {
+    position: absolute; left: calc(50% - 22px); bottom: 14px; width: 44px; height: 205px; padding: 0;
+    display: flex; flex-direction: column; border-radius: 6px 6px 4px 4px; overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.12); background: #fff;
+    transform-origin: 50% calc(100% - 10px); transform: rotate(var(--angle));
+    transition: transform 0.25s ease, box-shadow 0.25s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+  }
+  .blade span { flex: 1; }
+  .blade.selected { transform: rotate(var(--angle)) translateY(-10px) scale(1.06); box-shadow: 0 6px 16px rgba(0,0,0,0.3); outline: 2px solid var(--accent); }
+  .rivet { position: absolute; left: calc(50% - 7px); bottom: 17px; width: 14px; height: 14px; border-radius: 50%; background: #b9b2a4; border: 2px solid #8c8577; z-index: 60; }
+  .fan-nav { display: flex; align-items: center; gap: 10px; max-width: 340px; margin: 4px auto 0; }
+  .fan-nav input[type="range"] { flex: 1; accent-color: var(--accent); }
+  .round { width: 40px; height: 40px; padding: 0; border-radius: 50%; background: var(--accent-soft); color: var(--text); border: 1px solid var(--line); font-size: 1.3rem; line-height: 1; }
+  .center { text-align: center; }
+  .blade-detail, .search-results { list-style: none; padding: 0; margin: 8px 0 0; }
+  .search-results { max-height: 420px; overflow-y: auto; }
+  .color-pick { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; padding: 6px; margin: 2px 0; background: none; color: var(--text); font-weight: 400; border: 1px solid transparent; }
+  .color-pick.selected { border-color: var(--accent); background: var(--accent-soft); }
+  .color-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .chip { width: 44px; height: 32px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.15); flex: none; }
+  .chip.big { width: 56px; height: 56px; border-radius: 10px; }
+  .tick { color: var(--accent); font-weight: 700; }
+
+  /* ---------- Plan, time, costs ---------- */
+  .big-numbers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+  .big-numbers div { background: var(--accent-soft); border-radius: 10px; padding: 10px; text-align: center; }
+  .big-numbers strong { display: block; font-size: 1.35rem; font-variant-numeric: tabular-nums; line-height: 1.25; }
+  .big-numbers .schedule { font-size: 0.95rem; padding-top: 4px; }
+  .big-numbers span { font-size: 0.8rem; color: var(--muted); }
+  .shopping li, .reasons li { margin: 4px 0; }
+  .assumptions { color: var(--muted); font-size: 0.85rem; }
+  details summary { cursor: pointer; color: var(--accent); font-weight: 500; }
+  details { margin-top: 10px; }
+  .lines { list-style: none; padding: 0; margin: 0; font-variant-numeric: tabular-nums; }
+  .lines li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px dashed var(--line); font-size: 0.9rem; }
+  .lines li > span:last-child { white-space: nowrap; text-align: right; }
+  .lines li.wait { color: var(--muted); font-style: italic; }
+  .phases { list-style: none; padding: 0; margin: 8px 0; }
+  .phase { position: relative; padding: 0 0 14px 38px; }
+  .phase::before { content: ""; position: absolute; left: 13px; top: 30px; bottom: 0; border-left: 2px dashed var(--line); }
+  .phase:last-child::before { display: none; }
+  .phase-head { display: flex; align-items: center; gap: 8px; margin-left: -38px; }
+  .phase-num { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--accent-soft); border: 2px solid var(--accent); font-weight: 700; font-size: 0.85rem; flex: none; }
+  .phase-hours { margin-left: auto; font-weight: 600; white-space: nowrap; }
+  .phase .lines { margin-top: 6px; }
+  .gate { margin: 8px 0 0; padding: 8px 10px; background: var(--accent-soft); border-radius: 8px; font-size: 0.88rem; }
+  .cost-compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 10px 0; }
+  .cost { border-radius: 12px; padding: 12px; text-align: center; border: 1px solid var(--line); }
+  .cost span, .cost small { display: block; color: var(--muted); font-size: 0.85rem; }
+  .cost strong { display: block; font-size: 1.3rem; margin: 2px 0; font-variant-numeric: tabular-nums; }
+  .cost.diy { background: var(--accent-soft); }
+  .cost-toggle { margin: 4px 0 2px; }
+  .seg button { padding: 6px 16px; }
+  .cost { display: flex; flex-direction: column; min-width: 0; }
+
+
+  .repairs { list-style: none; padding: 0; margin: 6px 0 0; }
+  .repairs li { margin: 6px 0; }
+  .repair-row { display: grid; grid-template-columns: minmax(0, 1fr) 72px 40px; gap: 8px; align-items: center; }
+  .repair-row select, .repair-row input { margin-top: 0; }
+  .repair-note { margin: 2px 0 0 2px; }
+  .advice-list { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 8px; }
+  .advice-list li { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .advice-list li.pro-first { border-color: var(--warn); }
+  .advice-list p { margin: 6px 0; font-size: 0.92rem; }
+  .advice-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+  .fix-badge { font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); border: 1px solid var(--accent); }
+  .pro-first .fix-badge { border-color: var(--warn); color: var(--warn); background: none; }
+  .advice-warn { color: var(--warn); font-weight: 500; }
+  .advice-warn.block { border: 1px solid var(--warn); border-radius: 10px; padding: 10px 12px; margin: 12px 0; }
+  .advice-warn.block ul { margin: 6px 0 0; padding-left: 18px; }
+  .experience { margin: 0; }
+  #exp-drywall_patching .experience { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); }
+  .exp-q { margin: 0 0 8px; }
+  .exp-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .exp-options button { display: flex; flex-direction: column; gap: 2px; padding: 10px 8px; text-align: center; background: var(--bg); color: var(--text); border: 1px solid var(--line); font-weight: 400; }
+  .exp-options button strong { font-size: 0.88rem; }
+  .exp-options button small { font-size: 0.75rem; }
+  .exp-options button[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+  .difficulty { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0 0 8px; }
+  .diff-pill { font-size: 0.8rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--accent); background: var(--accent-soft); }
+  .diff-pill.d4, .diff-pill.d5 { border-color: var(--warn); color: var(--warn); background: none; }
+  .tuned { font-size: 0.88rem; color: var(--muted); margin: 0 0 6px; }
+  .link.inline { display: inline; padding: 0; font-size: inherit; }
+  @media (max-width: 420px) { .exp-options button small { display: none; } }
+  .pro-badge { font-size: 0.7rem; background: var(--gold); color: var(--gold-text); padding: 2px 8px; border-radius: 999px; letter-spacing: 0.05em; }
+  .foot { color: var(--muted); font-size: 0.78rem; text-align: center; padding-top: 8px; }
+  .foot a { color: var(--accent); }
+
+  @media (max-width: 420px) {
+    .grid2 { grid-template-columns: 1fr; }
+    .grid3 { grid-template-columns: 1fr 1fr; }
+    .grid3 label:last-child { grid-column: span 2; }
+    .big-numbers strong { font-size: 1.1rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .blade, #wall-back, #wall-left { transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>DIWHYMAN <span>Paint Planner</span></h1>
+      <p>Interactive demo: an imagined 10 × 10 ft bedroom. Change anything and the plan, hours and costs update instantly.</p>
+    </div>
+    <span class="demo-pill">Demo · sample room</span>
+  </header>
+
+  <div class="layout">
+    <!-- Left: the room and headline numbers -->
+    <aside class="stage" aria-label="Your room">
+      <div class="card room-card">
+        <svg viewBox="0 0 600 400" role="img" aria-label="Illustration of a bedroom whose walls show the selected paint color">
+          <defs>
+            <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#cfe6f5" />
+              <stop offset="1" stop-color="#9cc3de" />
+            </linearGradient>
+            <radialGradient id="daylight" cx="0.75" cy="0.4" r="0.7">
+              <stop offset="0" stop-color="#ffffff" stop-opacity="0.22" />
+              <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+            </radialGradient>
+            <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#a87f57" />
+              <stop offset="1" stop-color="#8d6643" />
+            </linearGradient>
+          </defs>
+          <!-- ceiling -->
+          <polygon points="0,0 600,0 600,58 150,58" fill="#f4f2ec" />
+          <!-- walls (recolored by script) -->
+          <polygon id="wall-left" points="0,0 150,58 150,300 0,380" fill="#e8e2d4" style="transition: fill .35s ease" />
+          <polygon points="0,0 150,58 150,300 0,380" fill="#000000" opacity="0.13" />
+          <rect id="wall-back" x="150" y="58" width="450" height="242" fill="#e8e2d4" style="transition: fill .35s ease" />
+          <rect x="150" y="58" width="450" height="242" fill="url(#daylight)" />
+          <!-- corner line and crown shadow -->
+          <line x1="150" y1="58" x2="150" y2="300" stroke="#000" stroke-opacity="0.12" stroke-width="2" />
+          <polygon points="0,0 600,0 600,62 150,62 150,58" fill="#000" opacity="0.04" />
+          <!-- floor -->
+          <polygon points="0,380 150,300 600,300 600,400 0,400" fill="url(#floor)" />
+          <g stroke="#7a5638" stroke-opacity="0.35" stroke-width="1.5">
+            <line x1="40" y1="400" x2="185" y2="300" /><line x1="140" y1="400" x2="240" y2="300" />
+            <line x1="250" y1="400" x2="300" y2="300" /><line x1="360" y1="400" x2="370" y2="300" />
+            <line x1="470" y1="400" x2="440" y2="300" /><line x1="580" y1="400" x2="510" y2="300" />
+          </g>
+          <!-- baseboards -->
+          <rect x="150" y="292" width="450" height="9" fill="#fbfaf6" />
+          <polygon points="0,372 150,292 150,301 0,382" fill="#ecebe5" />
+          <!-- door on the left wall -->
+          <polygon points="38,93 104,120 104,325 38,361" fill="#f7f6f1" stroke="#d8d4c8" stroke-width="2" />
+          <polygon points="48,112 94,130 94,210 48,198" fill="none" stroke="#dcd8cc" stroke-width="2" />
+          <polygon points="48,218 94,228 94,308 48,330" fill="none" stroke="#dcd8cc" stroke-width="2" />
+          <circle cx="92" cy="232" r="4" fill="#b8a77a" />
+          <!-- window on the back wall -->
+          <rect x="420" y="96" width="128" height="120" fill="#fbfaf6" />
+          <rect x="428" y="104" width="112" height="104" fill="url(#glass)" />
+          <line x1="484" y1="104" x2="484" y2="208" stroke="#fbfaf6" stroke-width="5" />
+          <line x1="428" y1="156" x2="540" y2="156" stroke="#fbfaf6" stroke-width="5" />
+          <rect x="414" y="214" width="140" height="8" fill="#f0eee8" />
+          <path d="M408 88 h22 v150 q-14 4 -22 0 z" fill="#c9b9a0" />
+          <path d="M538 88 h22 v150 q-10 4 -22 0 z" fill="#c9b9a0" />
+          <rect x="402" y="84" width="164" height="5" rx="2" fill="#6b5a45" />
+          <!-- art above the bed -->
+          <rect x="226" y="104" width="84" height="58" fill="#3f4a44" />
+          <rect x="232" y="110" width="72" height="46" fill="#e9e4d8" />
+          <path d="M236 150 l18 -20 l14 12 l12 -16 l20 24 z" fill="#8aa695" />
+          <circle cx="288" cy="122" r="5" fill="#d9a441" />
+          <!-- bed -->
+          <rect x="196" y="196" width="146" height="78" rx="6" fill="#6f5640" />
+          <rect x="204" y="204" width="130" height="60" rx="4" fill="#7d624a" />
+          <polygon points="186,262 352,262 384,352 154,352" fill="#eceae4" />
+          <polygon points="178,300 360,300 386,352 152,352" fill="#9fb3bf" />
+          <polygon points="152,352 386,352 384,366 154,366" fill="#869aa6" />
+          <ellipse cx="236" cy="256" rx="30" ry="12" fill="#fbfaf7" />
+          <ellipse cx="302" cy="256" rx="30" ry="12" fill="#fbfaf7" />
+          <!-- nightstand + lamp -->
+          <rect x="356" y="244" width="46" height="56" rx="3" fill="#7d624a" />
+          <rect x="356" y="268" width="46" height="3" fill="#6f5640" />
+          <rect x="376" y="226" width="5" height="18" fill="#5c5348" />
+          <path d="M364 206 h30 l6 22 h-42 z" fill="#efe3c8" />
+          <!-- rug -->
+          <polygon points="120,384 430,384 470,400 80,400" fill="#c7a98a" opacity="0.85" />
+        </svg>
+        <div class="room-bar">
+          <div class="seg" role="group" aria-label="Show the room before or after painting">
+            <button type="button" id="show-before" aria-pressed="false">Before</button>
+            <button type="button" id="show-after" aria-pressed="true">After</button>
+          </div>
+          <span class="room-caption" id="room-caption"></span>
+        </div>
+      </div>
+
+      <div class="kpis" aria-live="polite">
+        <div class="kpi"><strong id="kpi-sqft">–</strong><span>sq ft</span></div>
+        <div class="kpi"><strong id="kpi-gal">–</strong><span>paint</span></div>
+        <div class="kpi"><strong id="kpi-hours">–</strong><span>work hours</span></div>
+        <div class="kpi"><strong id="kpi-cost">–</strong><span>DIY cost</span></div>
+      </div>
+
+      <div class="card chosen" id="chosen"></div>
+    </aside>
+
+    <!-- Right: the planner -->
+    <main class="steps">
+      <section class="card" id="step-experience">
+        <div id="exp-interior_painting" class="exp-slot"></div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">1</span> Photo analysis</h2>
+        <p class="hint small">In the real app, you snap a photo and AI reads the room. For this demo, here's what it would report for the imagined bedroom:</p>
+        <dl class="analysis">
+          <div><dt>Walls</dt><dd>4 × 10 ft</dd></div>
+          <div><dt>Ceiling height</dt><dd>8 ft</dd></div>
+          <div><dt>Doors / windows</dt><dd>1 / 1</dd></div>
+          <div><dt>Current color</dt><dd>Warm beige</dd></div>
+          <div><dt>Repairs</dt><dd>6 nail holes, 1 dent, 2 trim gaps</dd></div>
+          <div><dt>Size confidence</dt><dd>Medium</dd></div>
+        </dl>
+        <button type="button" class="link" id="reset-room">Reset to the sample bedroom</button>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">2</span> Measure the room</h2>
+        <div class="walls-head">
+          <strong>Wall lengths (ft)</strong>
+          <label class="height" for="wall-height">Wall height (ft)
+            <input id="wall-height" type="number" inputmode="decimal" min="0" step="0.5" />
+          </label>
+        </div>
+        <ol class="walls" id="walls"></ol>
+        <button type="button" class="link" id="add-wall">+ Add a wall</button>
+        <div class="grid2">
+          <label for="doors">Doors <input id="doors" type="number" inputmode="numeric" min="0" step="1" /></label>
+          <label for="windows">Windows <input id="windows" type="number" inputmode="numeric" min="0" step="1" /></label>
+        </div>
+        <label class="check" for="include-ceiling"><input type="checkbox" id="include-ceiling" /> Paint the ceiling too (adds 100 sq ft)</label>
+        <div class="total-box" id="area-total" aria-live="polite"></div>
+        <label for="current-color">Current wall color
+          <span class="color-row">
+            <input id="current-color" type="color" />
+            <span class="muted">Warm beige in the sample room</span>
+          </span>
+        </label>
+        <fieldset>
+          <legend>Wall condition</legend>
+          <div id="conditions"></div>
+        </fieldset>
+      </section>
+
+      <section class="card" id="step-repairs">
+        <h2><span class="num">3</span> Holes, cracks and gaps</h2>
+        <p class="hint small">In the real app, you add close-up photos and AI sorts each spot into the right fix. Here's what it found in the sample bedroom. Change or add repairs to see the plan update.</p>
+        <ul class="repairs" id="repairs"></ul>
+        <button type="button" class="link" id="add-repair">+ Add a repair</button>
+        <div id="exp-drywall_patching" class="exp-slot"></div>
+        <div id="repair-advice" aria-live="polite"></div>
+      </section>
+
+      <section class="card">
+        <h2><span class="num">4</span> Pick your new color</h2>
+        <div class="brand-tabs" id="brand-tabs" role="tablist"></div>
+        <input id="color-search" type="search" placeholder="Search by name or code, e.g. Alabaster or SW 7008" aria-label="Search colors" />
+        <p class="hint small" id="brand-note">Loading colors…</p>
+        <div id="fan-view">
+          <div class="families" id="families"></div>
+          <div class="fan" id="fan" aria-label="Color fan"></div>
+          <div class="fan-nav">
+            <button id="fan-prev" class="round" type="button" aria-label="Previous strip">‹</button>
+            <input id="fan-scrub" type="range" min="0" value="0" aria-label="Move through the fan" />
+            <button id="fan-next" class="round" type="button" aria-label="Next strip">›</button>
+          </div>
+          <p class="hint small center" id="fan-position"></p>
+          <ul class="blade-detail" id="blade-detail"></ul>
+        </div>
+        <div id="search-view" hidden><ul class="search-results" id="search-results"></ul></div>
+      </section>
+
+      <section class="card" id="results">
+        <h2>Your paint plan</h2>
+        <div id="plan-body"></div>
+        <h3>Estimated time</h3>
+        <div id="hours-body"></div>
+        <h3>Cost estimate</h3>
+        <div class="grid3">
+          <label for="paint-price">Paint $/gal <input id="paint-price" type="number" inputmode="decimal" min="0" step="1" /></label>
+          <label for="primer-price">Primer $/gal <input id="primer-price" type="number" inputmode="decimal" min="0" step="1" /></label>
+          <label for="region">Your area
+            <select id="region">
+              <option value="lower">Lower cost</option>
+              <option value="average" selected>Average</option>
+              <option value="higher">Higher cost</option>
+            </select>
+          </label>
+        </div>
+        <div class="seg cost-toggle" role="group" aria-label="Compare by dollars or time">
+          <button type="button" id="view-dollars" aria-pressed="true">Dollars</button>
+          <button type="button" id="view-time" aria-pressed="false">Time</button>
+        </div>
+        <div id="cost-body"></div>
+      </section>
+
+      <section class="card">
+        <h2>See it in your own room <span class="pro-badge">PRO</span></h2>
+        <p class="hint">The illustration above is a free stand-in. In the full app, Pro members get an AI-generated photo of their own room finished: holes, cracks and gaps repaired, and the walls repainted in the chosen color. It's locked for free users because each image costs money to make.</p>
+      </section>
+
+      <p class="foot">Paint colors from the open <a href="https://github.com/jpederson/colornerd" target="_blank" rel="noopener">colornerd</a> dataset. On-screen colors are approximate. Brand and color names belong to their owners. Prices and hours are ballpark estimates.</p>
+    </main>
+  </div>
+</div>
+
+<script>
+/*SHARED*/
+
+const $ = (id) => document.getElementById(id);
+const SAMPLE = {
+  walls: [10, 10, 10, 10],
+  height: 8,
+  doors: 1,
+  windows: 1,
+  ceiling: false,
+  currentHex: "#e8e2d4",
+  conditions: [],
+  // What the close-up photo check would report for this room.
+  repairs: [
+    { type: "nail_holes", count: 6, note: "Seen above the bed (old picture hooks)" },
+    { type: "medium_holes", count: 1, note: "Seen behind the door, from the doorknob" },
+    { type: "trim_gaps", count: 2, note: "Seen along the window casing and one baseboard" },
+  ],
+};
+// Start on a real catalog color so the plan is filled in before the catalog loads.
+const START_COLOR = { brandId: "sherwin-williams", brand: "Sherwin-Williams", code: "SW 6204", name: "Sea Salt", hex: "#cdd2ca" };
+
+const state = {
+  brands: [
+    { id: "sherwin-williams", name: "Sherwin-Williams" },
+    { id: "benjamin-moore", name: "Benjamin Moore" },
+    { id: "behr", name: "Behr" },
+  ],
+  catalogs: {},
+  brandId: "sherwin-williams",
+  family: "Greens",
+  blades: [],
+  bladeIndex: 0,
+  chosen: START_COLOR,
+  showAfter: true,
+  paintPriceEdited: false,
+  // Sample answers so the demo opens fully filled in. Tap another level to see the times change.
+  experience: { interior_painting: "some", drywall_patching: "some" },
+  costView: "dollars", // or "time"
+  lastCosts: null,
+  lastHours: null,
+};
+const FAN_SIZE = 9;
+const BLADE_LENGTH = 7;
+
+// ---------- Room ----------
+function loadSample() {
+  setWalls(SAMPLE.walls);
+  $("wall-height").value = SAMPLE.height;
+  $("doors").value = SAMPLE.doors;
+  $("windows").value = SAMPLE.windows;
+  $("include-ceiling").checked = SAMPLE.ceiling;
+  $("current-color").value = SAMPLE.currentHex;
+  for (const box of document.querySelectorAll("#conditions input")) box.checked = SAMPLE.conditions.includes(box.value);
+  $("repairs").innerHTML = "";
+  for (const r of SAMPLE.repairs) addRepairRow(r.type, r.count, r.note);
+}
+
+function renderConditions() {
+  $("conditions").innerHTML = Object.entries(PaintCalc.CONDITIONS)
+    .map(([key, label]) => `<label><input type="checkbox" value="${key}" id="cond-${key}" /> ${label}</label>`)
+    .join("");
+}
+
+function addWallRow(value = "") {
+  const li = document.createElement("li");
+  const n = $("walls").children.length + 1;
+  li.innerHTML = `<span class="wall-label"></span>
+    <input type="number" inputmode="decimal" min="0" step="0.5" placeholder="ft" aria-label="Wall length in feet" />
+    <button type="button" class="remove-wall" aria-label="Remove wall">✕</button>`;
+  li.querySelector("input").value = value;
+  li.querySelector("input").id = `wall-${n}-${Date.now() % 100000}`;
+  $("walls").append(li);
+  renumberWalls();
+}
+function setWalls(widths) {
+  $("walls").innerHTML = "";
+  for (const w of widths) addWallRow(w);
+}
+function renumberWalls() {
+  [...$("walls").children].forEach((li, i) => (li.querySelector(".wall-label").textContent = `Wall ${i + 1}`));
+}
+$("add-wall").addEventListener("click", () => { addWallRow(); update(); });
+$("walls").addEventListener("click", (e) => {
+  const btn = e.target.closest(".remove-wall");
+  if (!btn) return;
+  btn.closest("li").remove();
+  if (!$("walls").children.length) addWallRow();
+  renumberWalls();
+  update();
+});
+$("reset-room").addEventListener("click", () => { loadSample(); update(); });
+
+function readRoom() {
+  const walls = [...document.querySelectorAll("#walls input")].map((i) => Number(i.value) || 0);
+  const repairPlan = Repairs.planRepairs(readRepairs());
+  const conditions = [...document.querySelectorAll("#conditions input:checked")].map((b) => b.value);
+  // Spackled and patched spots need spot priming.
+  if (repairPlan.needsSpotPrime && !conditions.includes("patches")) conditions.push("patches");
+  return {
+    repairPlan,
+    experience: state.experience,
+    wallWidthsFt: walls,
+    wallHeightFt: Number($("wall-height").value),
+    doors: Number($("doors").value),
+    windows: Number($("windows").value),
+    includeCeiling: $("include-ceiling").checked,
+    // A 10 x 10 room: ceiling is 100 sq ft. For other layouts, use the first two walls.
+    ceilingSqFt: (walls[0] || 0) * (walls[1] || walls[0] || 0),
+    currentColorHex: $("current-color").value,
+    conditions,
+  };
+}
+
+// ---------- Holes, cracks and gaps ----------
+const REPAIR_OPTIONS = Object.entries(Repairs.REPAIR_TYPES)
+  .map(([id, t]) => `<option value="${id}">${escapeHtml(t.short)}</option>`)
+  .join("");
+
+function addRepairRow(type = "nail_holes", count = 1, note = "") {
+  const li = document.createElement("li");
+  const n = $("repairs").children.length + 1;
+  li.innerHTML = `
+    <div class="repair-row">
+      <select aria-label="Kind of repair" id="repair-type-${n}">${REPAIR_OPTIONS}</select>
+      <input type="number" inputmode="numeric" min="1" step="1" aria-label="How many" id="repair-count-${n}" />
+      <button type="button" class="remove-wall" aria-label="Remove repair">✕</button>
+    </div>
+    ${note ? `<small class="repair-note">${escapeHtml(note)}</small>` : ""}`;
+  li.querySelector("select").value = type;
+  li.querySelector("input").value = count;
+  $("repairs").append(li);
+}
+function readRepairs() {
+  return [...$("repairs").children].map((li) => ({
+    type: li.querySelector("select").value,
+    count: Number(li.querySelector("input").value) || 0,
+  }));
+}
+$("add-repair").addEventListener("click", () => { addRepairRow(); update(); });
+$("repairs").addEventListener("click", (e) => {
+  const btn = e.target.closest(".remove-wall");
+  if (!btn) return;
+  btn.closest("li").remove();
+  update();
+});
+
+function renderRepairAdvice(repairPlan) {
+  if (!repairPlan.hasRepairs) {
+    $("repair-advice").innerHTML = `<p class="muted small">No repairs. If your walls are smooth, you can skip this step.</p>`;
+    return;
+  }
+  $("repair-advice").innerHTML = `<h4>How to fix them</h4><ul class="advice-list">${repairPlan.repairs
+    .map(
+      (r) => `<li class="${r.proRecommended ? "pro-first" : ""}">
+        <div class="advice-head"><span class="fix-badge">${escapeHtml(r.fix)}</span><strong>${escapeHtml(r.label)}</strong><span class="muted small">× ${r.count}</span></div>
+        <p>${escapeHtml(r.method)}</p>
+        ${r.advice ? `<p class="advice-warn">⚠️ ${escapeHtml(r.advice)}</p>` : ""}
+        <small>Difficulty: ${Tasks.difficultyLabel(r.difficulty)}</small>
+      </li>`,
+    )
+    .join("")}</ul>`;
+}
+
+function repairWarningsHtml(repairPlan) {
+  const serious = repairPlan?.warnings.filter((w) => w.proRecommended) || [];
+  if (!serious.length) return "";
+  return `<div class="advice-warn block"><strong>⚠️ Before you paint:</strong><ul>${serious.map((w) => `<li>${escapeHtml(w.text)}</li>`).join("")}</ul></div>`;
+}
+
+// ---------- Experience, asked per task ----------
+function jobTasks(repairPlan) {
+  const ids = ["interior_painting"];
+  for (const skill of repairPlan?.skills || []) if (!ids.includes(skill)) ids.push(skill);
+  return ids;
+}
+function experiencePicker(taskId) {
+  const t = Tasks.TASKS[taskId];
+  const options = Object.entries(Tasks.EXPERIENCE_LEVELS)
+    .map(([level, l]) => `<button type="button" role="radio" aria-checked="${state.experience[taskId] === level}" data-exp-task="${taskId}" data-exp-level="${level}"><strong>${l.label}</strong><small>${l.hint}</small></button>`)
+    .join("");
+  return `<div class="experience"><p class="exp-q"><strong>${escapeHtml(t.question)}</strong><small>Your answer tunes the time estimates for this task.</small></p>
+    <div class="exp-options" role="radiogroup" aria-label="${escapeHtml(t.question)}">${options}</div></div>`;
+}
+function renderExperience(repairPlan) {
+  const tasks = jobTasks(repairPlan);
+  for (const slot of document.querySelectorAll(".exp-slot")) {
+    const taskId = slot.id.replace("exp-", "");
+    slot.innerHTML = tasks.includes(taskId) ? experiencePicker(taskId) : "";
+  }
+}
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-exp-task]");
+  if (btn) {
+    state.experience = { ...state.experience, [btn.dataset.expTask]: btn.dataset.expLevel };
+    update();
+    return;
+  }
+  const change = e.target.closest("[data-goto-exp]");
+  if (change) $(`exp-${change.dataset.gotoExp}`).scrollIntoView({ behavior: "smooth", block: "center" });
+});
+function difficultyHtml(repairPlan) {
+  const T = Tasks.TASKS;
+  const tasks = jobTasks(repairPlan);
+  const base = Math.max(...tasks.map((id) => T[id].difficulty));
+  const hardestRepair = (repairPlan?.repairs || []).filter((r) => !r.proRecommended).sort((a, b) => b.difficulty - a.difficulty)[0];
+  const overall = Math.max(base, hardestRepair?.difficulty || 0);
+  const parts = tasks.map((id) => `${T[id].name}: ${Tasks.difficultyLabel(T[id].difficulty)}`);
+  const hardestNote = hardestRepair && hardestRepair.difficulty > base
+    ? ` Hardest part: ${escapeHtml(hardestRepair.label.toLowerCase())} (${Tasks.difficultyLabel(hardestRepair.difficulty).toLowerCase()}).` : "";
+  return `<p class="difficulty"><span class="diff-pill d${overall}">${Tasks.difficultyLabel(overall)}</span><small>${escapeHtml(parts.join(" · "))}.${hardestNote}</small></p>`;
+}
+function tunedForHtml() {
+  const tasks = jobTasks(Repairs.planRepairs(readRepairs()));
+  const answered = tasks.filter((id) => state.experience[id]);
+  if (!answered.length) return `<p class="tuned">These are full ranges. <button type="button" class="link inline" data-goto-exp="interior_painting">Tell us your experience</button> to narrow them.</p>`;
+  const parts = answered.map((id) => `${Tasks.TASKS[id].name.toLowerCase()}: ${Tasks.EXPERIENCE_LEVELS[state.experience[id]].label.toLowerCase()}`);
+  const missing = tasks.find((id) => !state.experience[id]);
+  return `<p class="tuned">Tuned for ${escapeHtml(parts.join(", "))}. <button type="button" class="link inline" data-goto-exp="${missing || answered[0]}">${missing ? `Add your ${escapeHtml(Tasks.TASKS[missing].name.toLowerCase())} experience` : "Change"}</button></p>`;
+}
+
+// ---------- Live update ----------
+document.querySelector(".steps").addEventListener("input", (e) => {
+  if (e.target.id === "color-search") return;
+  if (e.target.id === "paint-price") state.paintPriceEdited = true;
+  update();
+});
+$("region").addEventListener("change", update);
+
+function update() {
+  const room = readRoom();
+  paintRoom();
+  renderRepairAdvice(room.repairPlan);
+  renderExperience(room.repairPlan);
+  renderChosen();
+  let area;
+  try {
+    area = PaintCalc.paintableArea(room);
+  } catch {
+    $("area-total").innerHTML = `<span class="muted">Enter wall lengths and a height to see the square footage.</span>`;
+    for (const id of ["kpi-sqft", "kpi-gal", "kpi-hours", "kpi-cost"]) $(id).textContent = "–";
+    $("plan-body").innerHTML = $("hours-body").innerHTML = $("cost-body").innerHTML = `<p class="muted">Fill in the measurements in step 2.</p>`;
+    return;
+  }
+  renderAreaTotal(room, area);
+
+  const plan = PaintCalc.buildPaintPlan({ ...room, targetColorHex: state.chosen.hex });
+  const hours = Hours.estimateHours(plan, room);
+  const costs = Costs.estimateCosts(plan, {
+    brandId: state.chosen.brandId,
+    paintPerGallon: $("paint-price").value,
+    primerPerGallon: $("primer-price").value,
+    region: $("region").value,
+    conditions: room.conditions,
+    repairPlan: room.repairPlan,
+  });
+  renderPlan(plan, room.repairPlan);
+  renderHours(hours);
+  renderCosts(costs, hours);
+
+  $("kpi-sqft").textContent = Math.round(plan.area.totalSqFt);
+  $("kpi-gal").textContent = `${plan.paint.buy.gallons} gal`;
+  $("kpi-hours").textContent = Hours.formatHours(hours.workHours).replace(/ hrs?$/, "");
+  $("kpi-cost").textContent = Costs.money(costs.diy.total);
+}
+
+function renderAreaTotal(room, a) {
+  const walls = room.wallWidthsFt.filter((w) => w > 0).length;
+  $("area-total").innerHTML = `
+    <div class="total-line"><span>${walls} wall${walls > 1 ? "s" : ""}: ${fmt(a.totalWallWidthFt)} ft × ${fmt(a.wallHeightFt)} ft</span><span>${fmt(a.grossWallSqFt)} sq ft</span></div>
+    <div class="total-line"><span>Doors &amp; windows</span><span>− ${fmt(a.openingsSqFt)} sq ft</span></div>
+    ${a.ceilingSqFt ? `<div class="total-line"><span>Ceiling</span><span>+ ${fmt(a.ceilingSqFt)} sq ft</span></div>` : ""}
+    <div class="total-line grand"><span>Total to paint</span><span>${fmt(a.totalSqFt)} sq ft</span></div>`;
+}
+
+// ---------- Room illustration ----------
+function paintRoom() {
+  const hex = state.showAfter ? state.chosen.hex : $("current-color").value;
+  $("wall-back").setAttribute("fill", hex);
+  $("wall-left").setAttribute("fill", hex);
+  $("room-caption").textContent = state.showAfter
+    ? `After: ${state.chosen.name}`
+    : "Before: warm beige";
+  $("show-before").setAttribute("aria-pressed", String(!state.showAfter));
+  $("show-after").setAttribute("aria-pressed", String(state.showAfter));
+}
+$("show-before").addEventListener("click", () => { state.showAfter = false; paintRoom(); });
+$("show-after").addEventListener("click", () => { state.showAfter = true; paintRoom(); });
+
+function renderChosen() {
+  const c = state.chosen;
+  $("chosen").innerHTML = `<span class="chip big" style="background:${c.hex}"></span>
+    <span><small>New color</small><strong>${escapeHtml(c.name)}</strong>
+    <small>${escapeHtml([c.brand, c.code].filter(Boolean).join(" · "))} · ${c.hex.toUpperCase()}</small></span>`;
+}
+
+// ---------- Color fan ----------
+function renderBrandTabs() {
+  $("brand-tabs").innerHTML = state.brands
+    .map((b) => `<button type="button" role="tab" data-brand="${b.id}" aria-selected="${b.id === state.brandId}">${escapeHtml(b.name)}</button>`)
+    .join("");
+}
+$("brand-tabs").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-brand]");
+  if (btn) selectBrand(btn.dataset.brand);
+});
+
+async function selectBrand(id) {
+  state.brandId = id;
+  for (const b of document.querySelectorAll("#brand-tabs button")) b.setAttribute("aria-selected", String(b.dataset.brand === id));
+  $("brand-note").textContent = "Loading colors…";
+  const catalog = await loadCatalog(id);
+  if (state.brandId !== id) return;
+  if (!catalog) {
+    $("brand-note").textContent = "The color catalog couldn't be loaded. Refresh the page to try again.";
+    return;
+  }
+  $("brand-note").textContent = catalog.note || `${catalog.colors.length.toLocaleString()} ${catalog.brand} colors. Tap a strip, then a color.`;
+  renderFamilies(catalog);
+  selectFamily(state.family);
+  runSearch();
+}
+
+async function loadCatalog(id) {
+  if (state.catalogs[id]) return state.catalogs[id];
+  try {
+    const res = await fetch(`colors/${id}.json`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    data.colors = data.colors.map(([code, name, hex, family, hue, light]) => ({ code, name, hex, family, hue, light }));
+    state.catalogs[id] = data;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function renderFamilies(catalog) {
+  $("families").innerHTML = catalog.families
+    .map((f) => {
+      const members = catalog.colors.filter((c) => c.family === f);
+      if (!members.length) return "";
+      const sample = [...members].sort((a, b) => Math.abs(a.light - 60) - Math.abs(b.light - 60))[0];
+      const dot = f === "Whites" ? "#f4f2ea" : sample.hex;
+      return `<button type="button" class="family" data-family="${f}" aria-pressed="false"><span style="background:${dot}"></span>${f}</button>`;
+    })
+    .join("");
+}
+$("families").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-family]");
+  if (btn) selectFamily(btn.dataset.family);
+});
+
+function selectFamily(family, focusCode) {
+  const catalog = state.catalogs[state.brandId];
+  if (!catalog) return;
+  state.family = family;
+  for (const b of document.querySelectorAll(".family")) b.setAttribute("aria-pressed", String(b.dataset.family === family));
+  const members = catalog.colors.filter((c) => c.family === family).sort((a, b) => a.hue - b.hue || b.light - a.light);
+  state.blades = [];
+  for (let i = 0; i < members.length; i += BLADE_LENGTH) {
+    state.blades.push(members.slice(i, i + BLADE_LENGTH).sort((a, b) => b.light - a.light));
+  }
+  const withChosen = focusCode ? state.blades.findIndex((bl) => bl.some((c) => c.code === focusCode)) : -1;
+  state.bladeIndex = withChosen >= 0 ? withChosen : Math.min(Math.floor(FAN_SIZE / 2), state.blades.length - 1);
+  $("fan-scrub").max = Math.max(0, state.blades.length - 1);
+  renderFan();
+}
+
+function renderFan() {
+  const total = state.blades.length;
+  if (!total) {
+    $("fan").innerHTML = $("blade-detail").innerHTML = "";
+    $("fan-position").textContent = "No colors in this family.";
+    return;
+  }
+  const start = Math.max(0, Math.min(state.bladeIndex - Math.floor(FAN_SIZE / 2), total - FAN_SIZE));
+  const visible = state.blades.slice(start, start + FAN_SIZE);
+  const spread = 84;
+  const step = visible.length > 1 ? spread / (visible.length - 1) : 0;
+  $("fan").innerHTML =
+    visible
+      .map((blade, i) => {
+        const index = start + i;
+        const angle = visible.length > 1 ? -spread / 2 + i * step : 0;
+        const selected = index === state.bladeIndex;
+        return `<button type="button" class="blade${selected ? " selected" : ""}" data-blade="${index}"
+          style="--angle:${angle}deg; z-index:${selected ? 50 : i}" aria-label="Color strip ${index + 1}" aria-pressed="${selected}">
+          ${blade.map((c) => `<span style="background:${c.hex}"></span>`).join("")}</button>`;
+      })
+      .join("") + `<span class="rivet" aria-hidden="true"></span>`;
+  $("fan-scrub").value = state.bladeIndex;
+  $("fan-prev").disabled = state.bladeIndex === 0;
+  $("fan-next").disabled = state.bladeIndex >= total - 1;
+  $("fan-position").textContent = `Strip ${state.bladeIndex + 1} of ${total} · ${state.family}`;
+  $("blade-detail").innerHTML = (state.blades[state.bladeIndex] || []).map((c) => colorRow(c, state.brandId)).join("");
+}
+$("fan").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-blade]");
+  if (!btn) return;
+  state.bladeIndex = Number(btn.dataset.blade);
+  renderFan();
+});
+$("fan-prev").addEventListener("click", () => moveBlade(-1));
+$("fan-next").addEventListener("click", () => moveBlade(1));
+$("fan-scrub").addEventListener("input", (e) => { state.bladeIndex = Number(e.target.value); renderFan(); });
+function moveBlade(delta) {
+  state.bladeIndex = Math.max(0, Math.min(state.blades.length - 1, state.bladeIndex + delta));
+  renderFan();
+}
+let touchX = null;
+$("fan").addEventListener("touchstart", (e) => (touchX = e.touches[0].clientX), { passive: true });
+$("fan").addEventListener("touchend", (e) => {
+  if (touchX === null) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  if (Math.abs(dx) > 30) moveBlade(dx < 0 ? 1 : -1);
+  touchX = null;
+});
+
+function colorRow(c, brandId) {
+  const selected = state.chosen.brandId === brandId && state.chosen.code === c.code;
+  return `<li><button type="button" class="color-pick${selected ? " selected" : ""}" data-code="${escapeHtml(c.code)}" data-brand="${brandId}">
+    <span class="chip" style="background:${c.hex}"></span>
+    <span class="color-text"><strong>${escapeHtml(c.name)}</strong><small>${escapeHtml(c.code)}</small></span>
+    ${selected ? '<span class="tick">✓</span>' : ""}</button></li>`;
+}
+for (const id of ["blade-detail", "search-results"]) {
+  $(id).addEventListener("click", (e) => {
+    const btn = e.target.closest(".color-pick");
+    if (!btn) return;
+    const catalog = state.catalogs[btn.dataset.brand];
+    const color = catalog.colors.find((c) => c.code === btn.dataset.code);
+    state.chosen = { brandId: btn.dataset.brand, brand: catalog.brand, code: color.code, name: color.name, hex: color.hex };
+    if (!state.paintPriceEdited) $("paint-price").value = Costs.COST_DEFAULTS.paintPerGallon[state.chosen.brandId] ?? Costs.COST_DEFAULTS.paintPerGallon.other;
+    state.showAfter = true;
+    renderFan();
+    runSearch();
+    update();
+  });
+}
+$("color-search").addEventListener("input", runSearch);
+function runSearch() {
+  const q = $("color-search").value.trim().toLowerCase();
+  const searching = q.length >= 2;
+  $("fan-view").hidden = searching;
+  $("search-view").hidden = !searching;
+  if (!searching) return;
+  const catalog = state.catalogs[state.brandId];
+  if (!catalog) return;
+  const compact = q.replace(/[\s-]/g, "");
+  const matches = catalog.colors
+    .filter((c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().replace(/[\s-]/g, "").includes(compact))
+    .slice(0, 60);
+  $("search-results").innerHTML = matches.length
+    ? matches.map((c) => colorRow(c, state.brandId)).join("")
+    : `<li class="muted">No ${escapeHtml(catalog.brand)} colors match "${escapeHtml(q)}". Try another brand.</li>`;
+}
+
+// ---------- Plan, hours, costs ----------
+function renderPlan(p, repairPlan) {
+  const primerLabel = { none: "None", spot: "Spot", full: "Full coat" }[p.primer];
+  const label = [state.chosen.brand, state.chosen.name, state.chosen.code ? `(${state.chosen.code})` : ""].filter(Boolean).join(" ");
+  const shopping = [
+    `<li><strong>Paint: ${p.paint.buy.label}</strong> of ${escapeHtml(label)}<br><small>${p.paint.buy.note}${p.paint.buy.bucketTip ? " Tip: a 5-gallon bucket is usually cheaper than 5 single gallons." : ""}</small></li>`,
+  ];
+  if (p.primerAmount) shopping.push(`<li><strong>Primer: ${p.primerAmount.buy.label}</strong> of ${escapeHtml(p.primerType)}<br><small>${p.primerAmount.buy.note}</small></li>`);
+  if (repairPlan?.materials.length) {
+    const items = repairPlan.materials.map((m) => (m.qty > 1 ? `${m.label} × ${m.qty}` : m.label));
+    shopping.push(`<li><strong>Repair supplies:</strong> ${escapeHtml(items.join(", "))}</li>`);
+  }
+  shopping.push(`<li>Painter's tape, drop cloths, fine-grit sanding sponges (180–220 grit), a 9" roller with 3/8" nap, a tray and a 2" angled brush</li>`);
+  $("plan-body").innerHTML = `
+    ${difficultyHtml(repairPlan)}
+    <div class="big-numbers">
+      <div><strong>${Math.round(p.area.totalSqFt)}</strong><span>sq ft to paint</span></div>
+      <div><strong>${p.coats}</strong><span>coat${p.coats > 1 ? "s" : ""} of paint</span></div>
+      <div><strong>${primerLabel}</strong><span>primer</span></div>
+    </div>
+    <ul class="shopping">${shopping.join("")}</ul>
+    ${p.coats === 1 ? "<p class='hint small'>The paint is sized for two coats, in case one doesn't cover evenly.</p>" : ""}
+    ${repairWarningsHtml(repairPlan)}
+    ${p.prepSteps.length ? `<h4>Key steps</h4><ol>${p.prepSteps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ol>` : ""}
+    <details><summary>Why this plan</summary>
+      <ul class="reasons">${p.reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul>
+      <ul class="assumptions">${p.assumptions.map((a) => `<li>${escapeHtml(a)}</li>`).join("")}</ul>
+    </details>`;
+}
+
+function renderHours(h) {
+  const phases = h.phases.map((p, i) => {
+    const next = h.phases[i + 1];
+    const tasks = p.tasks.map((t) => `<li><span>${escapeHtml(t.name)}</span><span>${Hours.formatHours(t.hours)}</span></li>`).join("");
+    const waits = p.waits.map((w) => `<li class="wait"><span>⏳ ${escapeHtml(w.name)}</span><span>${Hours.formatHours(w.hours)}</span></li>`).join("");
+    return `<li class="phase">
+      <div class="phase-head"><span class="phase-num">${i + 1}</span><strong>${escapeHtml(p.name)}</strong><span class="phase-hours">${Hours.formatHours(p.hours)}</span></div>
+      <ul class="lines">${tasks}${waits}</ul>
+      <p class="gate"><strong>✓ ${next ? `Ready for ${escapeHtml(next.name)} when` : "Done when"}:</strong> ${escapeHtml(p.gate)}</p>
+    </li>`;
+  }).join("");
+  $("hours-body").innerHTML = `
+    ${tunedForHtml()}
+    <div class="big-numbers">
+      <div><strong>${Hours.formatHours(h.workHours).replace(/ hrs?$/, "")}</strong><span>hours of work</span></div>
+      <div><strong>${Hours.formatHours(h.waitHours).replace(/ hrs?$/, "")}</strong><span>hours drying</span></div>
+      <div><strong class="schedule">${escapeHtml(h.schedule)}</strong><span>plan for</span></div>
+    </div>
+    <ol class="phases">${phases}</ol>
+    <p class="hint small">A 2-person pro crew: about <strong>${Hours.formatHours(h.proCrewHours)}</strong> on site, plus drying time.</p>
+    <ul class="assumptions">${h.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>`;
+}
+
+// The cost cards show one measure at a time, picked with the Dollars / Time toggle.
+function costCards(c, h, cmp, range) {
+  const money = Costs.money;
+  const formatHours = Hours.formatHours;
+  const time = state.costView === "time";
+  const diy = time
+    ? `<strong>${formatHours(h.workHours)}</strong><small>of your time</small><small>Plan for ${escapeHtml(h.schedule.toLowerCase())}</small>`
+    : `<strong>${money(c.diy.total)}</strong><small>materials</small>`;
+  const pro = time
+    ? `<strong>${formatHours(h.proCrewHours)}</strong><small>crew on site</small><small>${escapeHtml(h.proSchedule)}</small>`
+    : `<strong>${range(c.pro.total)}</strong><small>labor + materials</small>`;
+  const summary = time
+    ? `Hiring a pro saves you <strong>${formatHours(cmp.yourHours)}</strong> of work. Doing it yourself works out to about <strong>${money(cmp.dollarsPerHour)} for every hour</strong> you put in.`
+    : `Doing it yourself saves about <strong>${range(cmp.dollarsSaved)}</strong>.`;
+  return `
+    <div class="cost-compare">
+      <div class="cost diy"><span>Do it yourself</span>${diy}</div>
+      <div class="cost pro"><span>Hire a pro</span>${pro}</div>
+    </div>
+    <p class="savings">${summary}</p>`;
+}
+
+function renderCosts(c, h) {
+  state.lastCosts = c;
+  state.lastHours = h;
+  const money = Costs.money;
+  const formatHours = Hours.formatHours;
+  const range = ([lo, hi]) => `${money(lo)}–${money(hi)}`;
+  const cmp = Costs.compareDiyVsPro(c, h);
+  $("cost-body").innerHTML = `
+    ${costCards(c, h, cmp, range)}
+    <details><summary>Cost breakdown</summary>
+      <h4>Materials</h4>
+      <ul class="lines">${c.diy.lines.map((l) => `<li><span>${escapeHtml(l.label)}</span><span>${money(l.amount)}</span></li>`).join("")}</ul>
+      <h4>Professional labor</h4>
+      <ul class="lines">${c.pro.laborParts.map((l) => `<li><span>${escapeHtml(l.label)}</span><span>${range(l.range)}</span></li>`).join("")}
+      ${c.pro.minimumApplies ? `<li><span>Raised to a typical minimum job charge</span><span></span></li>` : ""}</ul>
+      <ul class="assumptions">${c.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>
+    </details>`;
+}
+
+// ---------- Helpers ----------
+function fmt(n) { return Number(n.toFixed(1)).toLocaleString("en-US"); }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+// Dollars / Time toggle for the cost cards.
+for (const view of ["dollars", "time"]) {
+  document.getElementById(`view-${view}`).addEventListener("click", () => {
+    state.costView = view;
+    document.getElementById("view-dollars").setAttribute("aria-pressed", String(view === "dollars"));
+    document.getElementById("view-time").setAttribute("aria-pressed", String(view === "time"));
+    if (state.lastCosts) renderCosts(state.lastCosts, state.lastHours);
+  });
+}
+
+// ---------- Start ----------
+renderConditions();
+loadSample();
+$("paint-price").value = Costs.COST_DEFAULTS.paintPerGallon[START_COLOR.brandId];
+$("primer-price").value = Costs.COST_DEFAULTS.primerPerGallon;
+renderBrandTabs();
+update();
+selectBrand(state.brandId).then(() => {
+  // Open the fan on the strip holding the starting color.
+  const c = state.catalogs[state.brandId]?.colors.find((x) => x.code === START_COLOR.code);
+  if (c) selectFamily(c.family, c.code);
+});
+</script>
