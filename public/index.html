@@ -4,16 +4,21 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>DIWHYMAN Paint Planner</title>
-    <meta name="description" content="Snap a photo of a room and get a paint plan." />
+    <meta name="description" content="Snap a photo of a room and get a paint plan with costs." />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header class="top">
       <h1>DIWHYMAN <span>Paint Planner</span></h1>
-      <p>Snap a photo of the room. We'll estimate the square footage and tell you how much paint and primer to buy.</p>
+      <p>Snap a photo, pick a color, and see how much paint you need and what the job will cost.</p>
     </header>
 
     <main>
+      <!-- Before anything: experience with this task -->
+      <section class="card" id="step-experience">
+        <div id="exp-interior_painting" class="exp-slot"></div>
+      </section>
+
       <!-- Step 1: photo -->
       <section class="card" id="step-photo">
         <h2><span class="num">1</span> Take a photo</h2>
@@ -37,22 +42,38 @@
         </details>
 
         <button id="analyze-btn" class="primary" disabled>Analyze photo</button>
-        <button id="manual-btn" class="link">Skip, I'll enter measurements myself</button>
         <p class="status" id="analyze-status" role="status"></p>
+        <button id="manual-btn" class="link">Skip the photo. I'll enter measurements myself.</button>
       </section>
 
-      <!-- Step 2: check the numbers -->
+      <!-- Step 2: measurements -->
       <section class="card" id="step-room" hidden>
-        <h2><span class="num">2</span> Check the measurements</h2>
+        <h2><span class="num">2</span> Measure the room</h2>
         <p class="hint" id="confidence-note"></p>
+
+        <details class="quick" id="quick-room">
+          <summary>Rectangular room? Enter length × width</summary>
+          <div class="grid2">
+            <label>Room length (ft)
+              <input id="room-length" type="number" inputmode="decimal" min="0" step="0.5" />
+            </label>
+            <label>Room width (ft)
+              <input id="room-width" type="number" inputmode="decimal" min="0" step="0.5" />
+            </label>
+          </div>
+          <button id="quick-fill" class="secondary" type="button">Fill in all 4 walls</button>
+        </details>
+
+        <div class="walls-head">
+          <strong>Wall lengths (ft)</strong>
+          <label class="height">Wall height (ft)
+            <input id="wall-height" type="number" inputmode="decimal" min="0" step="0.5" value="8" />
+          </label>
+        </div>
+        <ol class="walls" id="walls"></ol>
+        <button id="add-wall" class="link" type="button">+ Add a wall</button>
+
         <div class="grid2">
-          <label>Total wall width (ft)
-            <input id="wall-width" type="number" inputmode="decimal" min="0" step="0.5" required />
-            <small>All walls you're painting, added together</small>
-          </label>
-          <label>Wall height (ft)
-            <input id="wall-height" type="number" inputmode="decimal" min="0" step="0.5" value="8" required />
-          </label>
           <label>Doors
             <input id="doors" type="number" inputmode="numeric" min="0" step="1" value="1" />
           </label>
@@ -69,6 +90,8 @@
           <small>Room length × width</small>
         </label>
 
+        <div class="total-box" id="area-total" aria-live="polite"></div>
+
         <label>Current wall color
           <span class="color-row">
             <input id="current-color" type="color" value="#e8e2d4" />
@@ -82,34 +105,125 @@
         </fieldset>
       </section>
 
-      <!-- Step 3: new color -->
+      <!-- Step 4: color fan -->
+      <!-- Step 3: holes, cracks and gaps -->
+      <section class="card" id="step-repairs" hidden>
+        <h2><span class="num">3</span> Holes, cracks and gaps</h2>
+        <p class="hint">Fixing these before you paint makes the biggest difference to the finish. Add close-up photos and we'll tell you how to fix each one: caulk, spackle or a patch.</p>
+
+        <div id="repair-photo-tools">
+          <label class="photo-drop small-drop" for="repair-photos">
+            <span>📷 Add close-up photos (up to 4)</span>
+            <small>Put a coin next to small holes so we can judge the size.</small>
+          </label>
+          <input id="repair-photos" type="file" accept="image/*" multiple hidden />
+          <div class="thumbs" id="repair-thumbs"></div>
+          <button id="check-repairs" class="secondary" type="button" disabled>Check my photos</button>
+          <p class="status" id="repairs-status" role="status"></p>
+        </div>
+
+        <h3>Your repairs</h3>
+        <ul class="repairs" id="repairs"></ul>
+        <button id="add-repair" class="link" type="button">+ Add a repair yourself</button>
+        <div id="exp-drywall_patching" class="exp-slot"></div>
+        <div id="repair-advice" aria-live="polite"></div>
+      </section>
+
       <section class="card" id="step-color" hidden>
-        <h2><span class="num">3</span> Pick your new color</h2>
-        <div class="swatches" id="swatches"></div>
-        <label>Or choose any color
+        <h2><span class="num">4</span> Pick your new color</h2>
+
+        <div class="brand-tabs" id="brand-tabs" role="tablist"></div>
+        <input id="color-search" type="search" placeholder="Search by name or code, e.g. Alabaster or SW 7008" />
+        <p class="hint small" id="brand-note"></p>
+
+        <div id="fan-view">
+          <div class="families" id="families"></div>
+          <div class="fan" id="fan" aria-label="Color fan"></div>
+          <div class="fan-nav">
+            <button id="fan-prev" class="round" type="button" aria-label="Previous strips">‹</button>
+            <input id="fan-scrub" type="range" min="0" value="0" aria-label="Move through the fan" />
+            <button id="fan-next" class="round" type="button" aria-label="Next strips">›</button>
+          </div>
+          <p class="hint small center" id="fan-position"></p>
+          <ul class="blade-detail" id="blade-detail"></ul>
+        </div>
+
+        <div id="search-view" hidden>
+          <ul class="search-results" id="search-results"></ul>
+        </div>
+
+        <details class="custom-color">
+          <summary>Have a color that's not listed?</summary>
           <span class="color-row">
-            <input id="target-color" type="color" value="#7a9e7e" />
-            <input id="target-name" type="text" placeholder="Color name (optional)" value="Sage green" maxlength="60" />
+            <input id="custom-color" type="color" value="#7a9e7e" />
+            <input id="custom-name" type="text" placeholder="Color name (optional)" maxlength="60" />
+            <button id="use-custom" class="secondary small-btn" type="button">Use</button>
           </span>
-        </label>
-        <div class="actions">
-          <button id="plan-btn" class="primary">Get my paint plan</button>
-          <button id="preview-btn" class="secondary">Show me this color</button>
-        </div>
-        <p class="status" id="plan-status" role="status"></p>
+        </details>
+
+        <div class="chosen" id="chosen" hidden></div>
       </section>
 
-      <!-- Results -->
-      <section class="card" id="results" hidden></section>
+      <!-- Results: plan + costs -->
+      <section class="card" id="results" hidden>
+        <h2>Your paint plan</h2>
+        <div id="plan-body"></div>
 
-      <section class="card" id="preview-card" hidden>
-        <h2>Your room in <span id="preview-color-label"></span></h2>
-        <div class="compare">
-          <figure><img id="before-img" alt="Your room now" /><figcaption>Now</figcaption></figure>
-          <figure><img id="after-img" alt="Your room in the new color" /><figcaption>With new paint</figcaption></figure>
+        <h3>⏱️ Estimated time</h3>
+        <div id="hours-body"></div>
+
+        <h3>💵 Cost estimate</h3>
+        <div class="grid3">
+          <label>Paint $/gal
+            <input id="paint-price" type="number" inputmode="decimal" min="0" step="1" />
+          </label>
+          <label>Primer $/gal
+            <input id="primer-price" type="number" inputmode="decimal" min="0" step="1" />
+          </label>
+          <label>Your area
+            <select id="region">
+              <option value="lower">Lower cost</option>
+              <option value="average" selected>Average</option>
+              <option value="higher">Higher cost</option>
+            </select>
+          </label>
         </div>
-        <p class="hint">This is an AI-generated preview. Screens and lighting change how colors look, so always test a sample on the wall before buying.</p>
+        <div class="seg cost-toggle" role="group" aria-label="Compare by dollars or time">
+          <button type="button" id="view-dollars" aria-pressed="true">Dollars</button>
+          <button type="button" id="view-time" aria-pressed="false">Time</button>
+        </div>
+        <div id="cost-body"></div>
       </section>
+
+      <!-- Pro: AI color preview -->
+      <section class="card pro-card" id="preview-section" hidden>
+        <h2>✨ See it in your room <span class="pro-badge">PRO</span></h2>
+        <p class="hint">See your room finished, before you buy anything: AI repairs the holes, cracks and gaps in your photo and repaints the walls in your color.</p>
+
+        <div id="pro-locked">
+          <p>The color preview is part of Pro. Have a Pro code? Enter it to unlock.</p>
+          <span class="color-row">
+            <input id="pro-code" type="text" placeholder="Pro code" autocomplete="off" autocapitalize="characters" />
+            <button id="pro-unlock" class="secondary small-btn" type="button">Unlock</button>
+          </span>
+        </div>
+
+        <button id="preview-btn" class="primary" hidden>Show my room in this color</button>
+        <p class="status" id="preview-status" role="status"></p>
+
+        <div id="preview-result" hidden>
+          <div class="compare">
+            <figure><img id="before-img" alt="Your room now" /><figcaption>Now</figcaption></figure>
+            <figure><img id="after-img" alt="Your room in the new color" /><figcaption id="after-caption">Finished</figcaption></figure>
+          </div>
+          <p class="hint">AI-generated preview of the finished room. Screens and lighting change how colors look, so test a sample on the wall before buying.</p>
+        </div>
+      </section>
+
+      <footer class="foot">
+        Paint colors from the open <a href="https://github.com/jpederson/colornerd">colornerd</a> dataset. On-screen colors are approximate.
+        Brand and color names belong to their owners. This app isn't affiliated with any paint brand.
+      </footer>
     </main>
 
     <script type="module" src="app.js"></script>
